@@ -80,7 +80,13 @@ Edit `src/template.html`, run `python3 build.py`, run `npm test`, then deploy
 before: a rule quietly doing the wrong thing, and a line of setup code that
 throws on load and takes the screen with it.
 
-To add words, edit `data/dictionary.json`. `words` and `geo` are newline-joined
-lists where each entry starts with a character giving how many letters it shares
+The dictionary was built from WordNet, Wordset, kengdic and wordfreq, but those
+build scripts are gone and `data/dictionary.json` is the only copy. Don't change
+the word list by hand: editing one entry skips whatever the pipeline did for that
+word's other forms, which is how HURLED came to be playable while HURL was not.
+Widening the list means rebuilding the pipeline from scratch, so treat it as its
+own project.
+
+For reading the file: `words` and `geo` are newline-joined lists where each entry starts with a character giving how many letters it shares
 with the entry before it (`0` means none, `1` one, and so on), so they stay
 small; `defs` and `ko` are keyed by the base form of a word.
