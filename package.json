@@ -1,0 +1,11 @@
+{
+  "name": "nightstand-scrabble",
+  "private": true,
+  "scripts": {
+    "build": "python3 build.py",
+    "test": "node test/run.js"
+  },
+  "devDependencies": {
+    "jsdom": "^29.1.1"
+  }
+}

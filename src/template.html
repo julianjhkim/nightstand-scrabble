@@ -1,0 +1,1815 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Nightstand Scrabble</title>
+<style>
+  :root{
+    --night:#0F1626; --panel:#18213A; --panel2:#1F2A48; --line:#2C3960;
+    --bone:#EFE2C6; --boneInk:#2B2114; --amber:#E9A94A; --rose:#D98A93;
+    --good:#5FD39B; --bad:#E2757F;
+    --tw:#8E3B52; --dw:#B0616F; --tl:#245D7A; --dl:#3E869E; --cell:#202B49;
+    --dim:#8B99BF;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0;background:var(--night);color:#E7ECF7;
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Apple SD Gothic Neo","Noto Sans KR",sans-serif}
+  body{max-width:520px;margin:0 auto;padding:10px 10px 18px;overscroll-behavior:none}
+  .eyebrow{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--dim)}
+
+  #setup{padding:24px 4px}
+  #setup h1{font-family:Georgia,serif;font-weight:400;font-size:30px;line-height:1.15;margin:10px 0 4px}
+  #setup h1 em{font-style:italic;color:var(--amber)}
+  #setup p.lede{color:var(--dim);font-size:13px;line-height:1.6;margin:0 0 22px}
+  .field{margin:0 0 14px}
+  .field label{display:block;font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--dim);margin-bottom:6px}
+  input[type=text]{width:100%;background:var(--panel);border:1px solid var(--line);color:#E7ECF7;
+    border-radius:10px;padding:12px;font-size:16px;font-family:Georgia,serif;letter-spacing:.14em}
+  .seg{display:flex;gap:6px}
+  .seg button{flex:1;background:var(--panel);border:1px solid var(--line);color:var(--dim);
+    padding:10px 4px;border-radius:10px;font-size:12px;cursor:pointer}
+  .seg button.on{background:#3E5570;border-color:#5C7796;color:#EAF1FB;font-weight:600}
+  .big:disabled{opacity:.3;cursor:default}
+  .big{width:100%;padding:14px;border-radius:12px;border:none;background:var(--bone);color:var(--boneInk);
+    font-size:15px;font-weight:600;cursor:pointer;margin-top:6px;font-family:Georgia,serif}
+  #startRow{display:grid;gap:8px;margin-top:12px}
+  #startRow .big{margin-top:0}
+  .big.go1{background:#C9A15E;color:#241905}
+  .big.go2{background:#6E8F7A;color:#0C1F16}
+  .ghost{width:100%;padding:12px;border-radius:12px;background:transparent;border:1px solid var(--line);
+    color:var(--dim);font-size:13px;cursor:pointer;margin-top:8px}
+  #lastGame{display:none;background:var(--panel);border:1px solid var(--line);border-radius:10px;
+    padding:10px 12px;margin:0 0 18px;font-size:13px}
+  #lastGame.on{display:block}
+  #lastGame .lg{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#5C6A90;
+    margin-bottom:3px}
+  #lastGame b{color:#E7ECF7}
+  .hint{font-size:11px;color:var(--dim);line-height:1.6;margin:8px 2px 0}
+
+  header{display:flex;align-items:stretch;gap:6px;margin-bottom:8px}
+  .score{flex:1;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:6px 9px}
+  .score.act{border-color:var(--amber);background:linear-gradient(180deg,#2A2338,var(--panel))}
+  .score .nm{font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .score .pt{font-family:Georgia,serif;font-size:23px;line-height:1.1}
+  .score.act .pt{color:var(--amber)}
+  .clock{font-family:ui-monospace,Menlo,monospace;font-size:11px;color:var(--dim);letter-spacing:.04em}
+  .clock.low{color:var(--bad)}
+  .score.act .clock{color:#E7ECF7}
+  .meta{width:60px;background:var(--panel);border:1px solid var(--line);border-radius:10px;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px}
+  .meta b{font-family:Georgia,serif;font-size:19px;font-weight:400}
+
+  #burst{display:none;margin-bottom:8px;background:linear-gradient(90deg,#4A1E2C,#8E3B52);
+    border-radius:10px;padding:9px 12px;align-items:center;justify-content:space-between}
+  #burst.on{display:flex}
+  #burst .lb{font-size:11px;letter-spacing:.08em}
+  #burst b{font-family:ui-monospace,monospace;font-size:20px}
+
+  #board{display:grid;grid-template-columns:repeat(15,1fr);gap:1.5px;background:var(--line);
+    padding:1.5px;border-radius:6px;aspect-ratio:1;touch-action:manipulation}
+  .c{background:var(--cell);border-radius:1.5px;display:flex;align-items:center;justify-content:center;
+    position:relative;font-size:6px;color:#fff9;overflow:hidden}
+  .c.tw{background:var(--tw)}.c.dw{background:var(--dw)}.c.tl{background:var(--tl)}.c.dl{background:var(--dl)}
+  .c.star{background:var(--dw)}
+  .c.t{background:var(--bone);color:var(--boneInk);font-family:Georgia,serif;font-weight:700;
+    font-size:min(3.4vw,17px);border-radius:2.5px;box-shadow:inset 0 -1.5px 0 #0002}
+  .c.t.bl{color:#8a6a3a}
+  .c.t.pend{background:#FBEFD2;outline:2px solid var(--amber);outline-offset:-2px;touch-action:none}
+  .c.over{outline:2px solid var(--amber);outline-offset:-2px;background:#2E3B60}
+  .c.t.lift{opacity:.28}
+  .c.t.pend.valid{outline-color:var(--good);box-shadow:0 0 8px #5FD39B66}
+  .c.t.glow{box-shadow:inset 0 -1.5px 0 #0002,0 0 0 1.5px var(--amber),0 0 10px #E9A94A88}
+  .c .v{position:absolute;right:1px;bottom:0;font-size:min(1.7vw,8px);font-weight:400;opacity:.65}
+
+  #rackwrap{margin-top:9px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:7px}
+  #rack{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}
+  .rt{aspect-ratio:1;background:var(--bone);color:var(--boneInk);border-radius:5px;display:flex;
+    align-items:center;justify-content:center;font-family:Georgia,serif;font-weight:700;
+    font-size:min(6.4vw,26px);position:relative;cursor:pointer;box-shadow:0 2px 0 #0004}
+  .rt{touch-action:none}
+  .rt.sel{outline:2px solid var(--amber);outline-offset:2px;transform:translateY(-3px);transition:.12s}
+  .rt.lift{opacity:.28}
+  .rt.ex{opacity:.45;outline:2px dashed var(--rose);outline-offset:2px}
+  .rt.gone{visibility:hidden}
+  .rt .v{position:absolute;right:2px;bottom:1px;font-size:min(2.4vw,11px);font-weight:400;opacity:.6}
+  #ctrl{display:grid;grid-template-columns:1.7fr 1fr 1fr 1fr;gap:5px;margin-top:7px}
+  #ctrl button{background:var(--panel2);border:1px solid var(--line);color:#C9D3EC;border-radius:8px;
+    padding:11px 2px;font-size:12px;cursor:pointer}
+  #ctrl button.pri{background:var(--amber);border-color:var(--amber);color:#241905;font-weight:700}
+  #ctrl button.pri.valid{background:var(--good);border-color:var(--good);color:#0B2A1D}
+  #ctrl button.urge{border-color:var(--rose);color:#F0C2C6;animation:ug 1.6s ease-in-out infinite}
+  @keyframes ug{0%,100%{background:var(--panel2)}50%{background:#3A2733}}
+  #ctrl button:disabled{opacity:.35}
+
+  #preview{margin-top:8px;font-size:12.5px;min-height:20px;color:var(--dim);text-align:center;
+    font-family:Georgia,serif}
+  #preview .g{color:var(--good)}
+  #preview .b{color:var(--bad)}
+  #preview .f{color:var(--rose)}
+  #preview .over{color:var(--bad);font-weight:700;font-size:15px;letter-spacing:.01em}
+
+  #feed{margin-top:8px;background:var(--panel);border:1px solid var(--line);border-radius:10px;
+    padding:6px 9px;max-height:112px;overflow-y:auto;font-size:12px;line-height:1.55;
+    overscroll-behavior:contain;scroll-behavior:smooth}
+  #feed.tall{max-height:46vh}
+  #feedBar{display:flex;justify-content:space-between;align-items:center;margin-top:8px;
+    font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim)}
+  #feedBar button{background:none;border:none;color:var(--dim);font-size:10px;
+    letter-spacing:.14em;text-transform:uppercase;cursor:pointer;padding:2px 0}
+  .ev{padding:2px 0;border-bottom:1px solid #ffffff0d;display:flex;gap:7px}
+  .ev:last-child{border-bottom:none}
+  .ev .who{color:var(--dim);flex:0 0 34px;font-size:10.5px;padding-top:1px}
+  .ev.me .who{color:var(--amber)}
+  .ev .txt b{color:#E7ECF7}
+  .miss{color:var(--dim);font-size:11px}
+  .box{display:inline-block;width:8px;height:11px;border:1px solid var(--dim);border-radius:1px;
+    margin-right:2px;vertical-align:-1px}
+  .miss b{color:var(--amber);font-weight:600}
+
+  #tools{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px}
+  #tools button{padding:10px 2px;font-size:11.5px}
+  #lbTools{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:14px}
+  #lbTools button{padding:11px 3px;font-size:11.5px}
+  #lbTools button{background:var(--panel2);border:1px solid var(--line);color:#C9D3EC;
+    border-radius:9px;padding:11px 4px;font-size:12px;cursor:pointer}
+  #bNotes{position:relative}
+  #bNotes .new{color:var(--amber)}
+  .rel{margin-bottom:22px}
+  .rel .when{font-family:Georgia,serif;font-size:21px;letter-spacing:.02em;color:var(--bone);
+    padding-bottom:9px;border-bottom:1px solid #ffffff22;margin-bottom:16px}
+  .rel+.rel .when{margin-top:10px}
+  .item{margin-bottom:15px;padding-left:14px;position:relative}
+  .item:before{content:'';position:absolute;left:0;top:7px;width:5px;height:5px;
+    border-radius:50%;background:#C9A15E}
+  .item .hd{font-size:13.5px;color:#E7ECF7;font-weight:600;margin-bottom:3px}
+  .item .dt{font-size:12.5px;line-height:1.62;color:#98A5C4;padding-left:1px;
+    border-left:1px solid #ffffff12;padding-left:10px;margin-left:-1px}
+  #tools button{background:var(--panel2);border:1px solid var(--line);color:#C9D3EC;border-radius:9px;
+    padding:10px;font-size:12px;cursor:pointer}
+
+  #sync{margin-top:8px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:9px 10px}
+  #sync button{width:100%;background:#2E3D66;border:1px solid var(--line);color:#fff;border-radius:8px;
+    padding:9px 6px;font-size:11.5px;cursor:pointer}
+  .status{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);margin-bottom:6px;
+    display:flex;justify-content:space-between;gap:8px}
+  .dot{width:6px;height:6px;border-radius:50%;background:#4A5878;display:inline-block;margin-right:5px}
+  .dot.live{background:var(--amber);box-shadow:0 0 6px var(--amber)}
+
+  .sheet{position:fixed;inset:0;background:#0B101Cdd;backdrop-filter:blur(3px);display:none;
+    align-items:flex-end;justify-content:center;z-index:9}
+  .sheet.on{display:flex}
+  #pauseSheet{align-items:center}
+  #pauseSheet h3{font-size:24px}
+  #ctrl button.frozen,#bPause.frozen{opacity:.35;pointer-events:none}
+  .sheet .card{background:var(--panel);border:1px solid var(--line);border-radius:16px 16px 0 0;padding:16px;
+    max-width:520px;width:100%;max-height:82vh;overflow:hidden;
+    display:flex;flex-direction:column}
+  .sheet .card>h3,.sheet .card>.ghost{flex:0 0 auto}
+  .sheet .scroll{flex:1 1 auto;overflow-y:auto;overscroll-behavior:contain;
+    -webkit-overflow-scrolling:touch;min-height:0}
+  .sheet .card>.ghost:first-of-type{margin-top:12px}
+  .sheet h3{margin:0 0 12px;font-family:Georgia,serif;font-weight:400;font-size:18px}
+  #letters{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}
+  #letters button{aspect-ratio:1;background:var(--bone);color:var(--boneInk);border:none;border-radius:5px;
+    font-family:Georgia,serif;font-weight:700;font-size:16px;cursor:pointer}
+  .wchip{display:inline-block;background:var(--panel2);border:1px solid var(--line);border-radius:7px;
+    padding:6px 10px;margin:0 5px 5px 0;font-family:Georgia,serif;font-size:14px;cursor:pointer}
+  .wchip.them{border-color:#4A3A5E}
+  .wchip.locked{cursor:default;opacity:.55;border-style:dashed}
+  .wchip .bx{letter-spacing:2px;color:var(--dim)}
+  .wchip small{color:var(--dim);font-family:system-ui;font-size:10px;margin-left:4px}
+  #def{margin-top:12px;font-size:13px;line-height:1.65;color:#CBD5EE;min-height:20px}
+  #def .pos{color:var(--amber);font-style:italic;font-size:12px}
+  #def .ex{color:var(--dim);font-style:italic}
+  #def .ko{color:var(--amber);font-size:15px;margin:-2px 0 10px;font-weight:500;
+    font-family:system-ui,"Apple SD Gothic Neo","Noto Sans KR",sans-serif}
+
+  #lobby{padding:44px 6px;text-align:center}
+  #lbRoom{font-family:Georgia,serif;font-size:25px;letter-spacing:.06em;margin:6px 0 10px;color:#C9D3EC}
+  #lbState{color:var(--dim);font-size:13px;margin-bottom:6px}
+  #lbSeat{color:#5C6A90;font-size:11.5px;margin-bottom:12px}
+  #seatSeg button{padding:12px 4px;font-size:13px}
+  #seatSeg button.taken{opacity:.45}
+  .pulse{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--amber);
+    margin-right:8px;vertical-align:1px;animation:bp 1.4s ease-in-out infinite}
+  @keyframes bp{0%,100%{opacity:.25;transform:scale(.8)}50%{opacity:1;transform:scale(1.15)}}
+  .pulse.on{animation:none;opacity:1;background:var(--good)}
+  #ghost{position:fixed;z-index:60;width:40px;height:40px;margin:-20px 0 0 -20px;opacity:.92;
+    background:var(--bone);color:var(--boneInk);border-radius:6px;display:flex;
+    align-items:center;justify-content:center;font-family:Georgia,serif;font-weight:700;
+    font-size:22px;pointer-events:none;box-shadow:0 4px 12px #0008}
+  #rackwrap.drop{outline:2px dashed var(--amber);outline-offset:2px}
+  .hidden{display:none!important}
+</style>
+</head>
+<body>
+
+<div id="setup">
+  <div class="eyebrow" data-t="eyebrow"></div>
+  <h1>Nightstand <em>Scrabble</em></h1>
+  <div id="lastGame"></div>
+  <div class="field">
+    <label data-t="l_name"></label>
+    <div class="seg" id="nameSeg">
+      <button data-nm="Junghyun"></button><button data-nm="Hailey"></button>
+    </div>
+  </div>
+  <div class="field">
+    <label data-t="l_clock"></label>
+    <div class="seg" id="clockSeg">
+      <button data-cl="420"></button><button data-cl="900" class="on"></button>
+      <button data-cl="-1"></button><button data-cl="0"></button>
+    </div>
+  </div>
+  <div id="startRow">
+    <button class="big go1" id="btnNew"></button>
+    <button class="big go2" id="btnJoin"></button>
+  </div>
+  <div id="lbTools">
+    <button id="bStats"></button>
+    <button id="bHist"></button>
+    <button id="bNotes"></button>
+  </div>
+</div>
+
+<div id="lobby" class="hidden">
+  <div id="lbRoom"></div>
+  <div id="lbState"><span class="pulse"></span><span id="lbText"></span></div>
+  <div id="lbSeat"></div>
+  <button class="big" id="lbInvite"></button>
+  <button class="ghost" id="lbSettings"></button>
+  <button class="ghost" id="lbCancel"></button>
+</div>
+
+<div id="game" class="hidden">
+  <div id="burst"><span class="lb" id="burstLb"></span><b id="burstT">1:00</b></div>
+  <header>
+    <div class="score" id="s0"><div class="nm">P1</div><div class="pt">0</div><div class="clock"></div></div>
+    <div class="meta"><div class="eyebrow" data-t="bagl"></div><b id="bagn">86</b></div>
+    <div class="score" id="s1"><div class="nm">P2</div><div class="pt">0</div><div class="clock"></div></div>
+  </header>
+  <div id="board"></div>
+  <div id="preview"></div>
+  <div id="rackwrap">
+    <div id="rack"></div>
+    <div id="ctrl">
+      <button id="bPlay" class="pri"></button>
+      <button id="bRecall"></button>
+      <button id="bShuffle"></button>
+      <button id="bExch"></button>
+    </div>
+  </div>
+  <div id="feedBar"><span id="feedCount"></span><button id="bExpand"></button></div>
+  <div id="feed"></div>
+  <div id="tools">
+    <button id="bPause"></button>
+    <button id="bWords"></button>
+    <button id="bNewGame"></button>
+  </div>
+  <div id="sync">
+    <div class="status"><span><span class="dot" id="dot"></span><span id="syncState"></span></span></div>
+    <button id="bInvite"></button>
+  </div>
+</div>
+
+<div class="sheet" id="pauseSheet"><div class="card" style="text-align:center;border-radius:16px;margin-bottom:22vh">
+  <h3 id="pauseTitle"></h3>
+  <div id="pauseWho" style="color:var(--dim);font-size:12.5px;margin:-6px 0 16px"></div>
+  <button class="big" id="bResume"></button>
+</div></div>
+
+<div class="sheet" id="blankSheet"><div class="card">
+  <h3 id="blankTitle"></h3>
+  <div class="scroll"><div id="letters"></div></div>
+  <button class="ghost" id="blankCancel"></button>
+</div></div>
+
+<div class="sheet" id="notesSheet"><div class="card">
+  <h3 id="notesTitle"></h3>
+  <div class="scroll"><div id="notesList"></div></div>
+  <button class="ghost" id="notesClose"></button>
+</div></div>
+
+<div class="sheet" id="histSheet"><div class="card">
+  <h3 id="histTitle"></h3>
+  <div class="scroll"><div id="histList"></div></div>
+  <button class="ghost" id="histClear"></button>
+  <button class="ghost" id="histClose"></button>
+</div></div>
+
+<div class="sheet" id="wordSheet"><div class="card">
+  <h3 id="wordTitle"></h3>
+  <div class="scroll"><div id="wordList"></div><div id="def"></div></div>
+  <button class="ghost" id="wordClose"></button>
+</div></div>
+
+<script>
+"use strict";
+const RAW = /*__DICT__*/null;
+
+function decodeList(s){
+  const out=[]; let prev='';
+  if(!s) return out;
+  for(const e of s.split('\n')){
+    const n=e.charCodeAt(0)-48;
+    const w=prev.slice(0,n)+e.slice(1); out.push(w); prev=w;
+  }
+  return out;
+}
+const CORE=decodeList(RAW.words);
+const GEO=decodeList(RAW.geo);
+const GEODEF=RAW.geodef||{};
+const DEFS=RAW.defs||{};
+const KO=RAW.ko||{};
+function jsStems(w){
+  const out=new Set([w]);
+  const pairs=[['s',''],['es',''],['ed',''],['ed','e'],['ing',''],['ing','e'],
+    ['er',''],['er','e'],['est',''],['est','e'],['ly',''],['ness',''],
+    ['ies','y'],['ied','y'],['ier','y'],['iest','y'],['ily','y'],['iness','y']];
+  for(const [suf,repl] of pairs)
+    if(w.endsWith(suf)&&w.length-suf.length>=2) out.add(w.slice(0,-suf.length)+repl);
+  for(const suf of ['ing','ed','er','est'])
+    if(w.endsWith(suf)){const b=w.slice(0,-suf.length);
+      if(b.length>2&&b[b.length-1]===b[b.length-2]) out.add(b.slice(0,-1));}
+  return out;
+}
+function localDef(w){
+  const k=w.toLowerCase();
+  if(GEODEF[k]&&!DEFS[k]) return {lemma:k,e:['place',GEODEF[k],''],ko:null};
+  for(const st of jsStems(k)) if(DEFS[st]) return {lemma:st,e:DEFS[st],ko:KO[st]||null};
+  return null;
+}
+function localKo(w){
+  const k=w.toLowerCase();
+  for(const st of jsStems(k)) if(KO[st]) return KO[st];
+  return null;
+}
+const TWO=RAW.two;
+/* `geo` rides in the old level slot, so both phones agree on the same rules */
+function buildDict(geo){
+  const s=new Set(CORE);
+  for(const w of TWO) s.add(w);
+  if(geo) for(const w of GEO) s.add(w);
+  return s;
+}
+
+const VAL={A:1,B:3,C:3,D:2,E:1,F:4,G:2,H:4,I:1,J:8,K:5,L:1,M:3,N:1,O:1,P:3,Q:10,
+           R:1,S:1,T:1,U:1,V:4,W:4,X:8,Y:4,Z:10,'_':0};
+const OUT_BONUS=20;
+const DIST={A:9,B:2,C:2,D:4,E:12,F:2,G:3,H:2,I:9,J:1,K:1,L:4,M:2,N:6,O:8,P:2,Q:1,
+            R:6,S:4,T:6,U:4,V:2,W:2,X:1,Y:2,Z:1,'_':2};
+const PREM=(function(){
+  const p=new Array(225).fill('');
+  const set=(l,k)=>l.forEach(([r,c])=>{p[r*15+c]=k;});
+  set([[0,0],[0,7],[0,14],[7,0],[7,14],[14,0],[14,7],[14,14]],'tw');
+  set([[1,1],[2,2],[3,3],[4,4],[10,10],[11,11],[12,12],[13,13],
+       [1,13],[2,12],[3,11],[4,10],[10,4],[11,3],[12,2],[13,1]],'dw');
+  set([[1,5],[1,9],[5,1],[5,5],[5,9],[5,13],[9,1],[9,5],[9,9],[9,13],[13,5],[13,9]],'tl');
+  set([[0,3],[0,11],[2,6],[2,8],[3,0],[3,7],[3,14],[6,2],[6,6],[6,8],[6,12],[7,3],[7,11],
+       [8,2],[8,6],[8,8],[8,12],[11,0],[11,7],[11,14],[12,6],[12,8],[14,3],[14,11]],'dl');
+  p[112]='star'; return p;
+})();
+
+function hash32(s){let h=2166136261>>>0;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)>>>0;}return h>>>0;}
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+function makeBag(seed){
+  const bag=[]; for(const k in DIST) for(let i=0;i<DIST[k];i++) bag.push(k);
+  const r=mulberry32(hash32('nsb:'+seed));
+  for(let i=bag.length-1;i>0;i--){const j=Math.floor(r()*(i+1));const t=bag[i];bag[i]=bag[j];bag[j]=t;}
+  return bag;
+}
+
+/* ---------------- codec (S3: absolute shared clock) ---------------- */
+const b36=n=>Math.max(0,Math.round(n)).toString(36);
+function encodeMove(m){
+  let s;
+  if(m.t==='X') s='X';
+  else if(m.t==='D') s='D';
+  else if(m.t==='U') s='U';
+  else if(m.t==='R') s='R';
+  else if(m.t==='F') s='F'+m.word;
+  else if(m.t==='E') s='E'+m.letters.map(c=>c==='_'?'?':c).join('');
+  else s='P'+m.tiles.map(p=>b36(p.r)+b36(p.c)+(p.blank?p.L.toLowerCase():p.L)).join('');
+  return s+'@'+b36(m.dt||0);
+}
+function decodeMove(str){
+  let s=str, dt=0;
+  const at=s.lastIndexOf('@');
+  if(at>=0){ dt=parseInt(s.slice(at+1),36)||0; s=s.slice(0,at); }
+  let m;
+  if(s[0]==='X') m={t:'X'};
+  else if(s[0]==='U') m={t:'U'};
+  else if(s[0]==='R') m={t:'R'};
+  else if(s[0]==='F') m={t:'F',word:s.slice(1)};
+  else if(s[0]==='E') m={t:'E',letters:[...s.slice(1)].map(c=>c==='?'?'_':c)};
+  else{
+    const tiles=[];
+    for(let i=1;i<s.length;i+=3){
+      const ch=s[i+2];
+      tiles.push({r:parseInt(s[i],36),c:parseInt(s[i+1],36),
+                  L:ch.toUpperCase(),blank:ch>='a'&&ch<='z'});
+    }
+    m={t:'P',tiles};
+  }
+  m.dt=dt; return m;
+}
+function encodeGame(g){
+  return ['S5',g.room,g.level,g.clock||0,b36(g.startAt),g.gameNo||1,g.first||0,
+          g.moves.map(encodeMove).join(',')].join('.');
+}
+function decodeGame(str){
+  const s=(str||'').trim().replace(/\s+/g,'');
+  const p=s.split('.');
+  if(p[0]==='S3'&&p.length>=6)
+    return {room:p[1],level:+p[2],clock:+p[3],startAt:parseInt(p[4],36),gameNo:1,
+            moves:p[5]?p[5].split(',').filter(Boolean).map(decodeMove):[]};
+  if(p[0]==='S4'&&p.length>=7)
+    return {room:p[1],level:+p[2],clock:+p[3],startAt:parseInt(p[4],36),gameNo:+p[5]||1,first:0,
+            moves:p[6]?p[6].split(',').filter(Boolean).map(decodeMove):[]};
+  if(p[0]!=='S5'||p.length<8) return null;
+  return {room:p[1],level:+p[2],clock:+p[3],startAt:parseInt(p[4],36),gameNo:+p[5]||1,
+          first:+p[6]||0,
+          moves:p[7]?p[7].split(',').filter(Boolean).map(decodeMove):[]};
+}
+
+/* ---------------- rules ---------------- */
+function wordCells(board,r,c,dr,dc){
+  let rr=r,cc=c;
+  for(;;){const pr=rr-dr,pc=cc-dc;
+    if(pr<0||pc<0||pr>14||pc>14||!board[pr*15+pc])break; rr=pr;cc=pc;}
+  const cells=[];
+  while(rr>=0&&cc>=0&&rr<15&&cc<15&&board[rr*15+cc]){cells.push(rr*15+cc);rr+=dr;cc+=dc;}
+  return cells;
+}
+function evaluate(board,placements,dict){
+  if(!placements.length) return {ok:false,err:'empty'};
+  const nb=board.slice(); const isNew=new Set();
+  for(const p of placements){
+    const i=p.r*15+p.c;
+    if(board[i]) return {ok:false,err:'occupied'};
+    nb[i]={L:p.L,blank:p.blank}; isNew.add(i);
+  }
+  const rows=new Set(placements.map(p=>p.r)), cols=new Set(placements.map(p=>p.c));
+  if(rows.size>1&&cols.size>1) return {ok:false,err:'line'};
+  const horiz=rows.size===1;
+  const idx=placements.map(p=>p.r*15+p.c).sort((a,b)=>a-b);
+  const step=horiz?1:15;
+  for(let i=idx[0];i<=idx[idx.length-1];i+=step) if(!nb[i]) return {ok:false,err:'gap'};
+  const first=board.every(x=>!x);
+  if(first){ if(!isNew.has(112)) return {ok:false,err:'center'}; }
+  else{
+    let touch=false;
+    for(const p of placements){
+      for(const [a,b] of [[-1,0],[1,0],[0,-1],[0,1]]){
+        const r=p.r+a,c=p.c+b;
+        if(r>=0&&c>=0&&r<15&&c<15&&board[r*15+c]){touch=true;break;}
+      }
+      if(touch)break;
+    }
+    if(!touch) return {ok:false,err:'touch'};
+  }
+  const seen=new Set(),words=[]; let total=0;
+  for(const p of placements){
+    for(const [a,b] of [[0,1],[1,0]]){
+      const cells=wordCells(nb,p.r,p.c,a,b);
+      if(cells.length<2) continue;
+      const key=cells[0]+':'+a+b;
+      if(seen.has(key)) continue; seen.add(key);
+      let word='',sc=0,mult=1;
+      for(const i of cells){
+        const t=nb[i]; let v=t.blank?0:VAL[t.L];
+        if(isNew.has(i)){
+          const pr=PREM[i];
+          if(pr==='dl')v*=2; else if(pr==='tl')v*=3;
+          else if(pr==='dw'||pr==='star')mult*=2; else if(pr==='tw')mult*=3;
+        }
+        sc+=v; word+=t.L;
+      }
+      sc*=mult; total+=sc; words.push({word,score:sc,cells});
+    }
+  }
+  if(!words.length) return {ok:false,err:'single'};
+  const bad=words.find(w=>!dict.has(w.word.toLowerCase()));
+  if(bad) return {ok:false,err:'word',word:bad.word};
+  if(placements.length===7) total+=50;
+  return {ok:true,score:total,words,bingo:placements.length===7};
+}
+
+/* ---------------- replay with a shared clock ----------------
+   All timing comes from absolute offsets stored in the moves, so both
+   phones compute identical clocks from identical data.                */
+function replay(g,dict,nowSec){
+  const {room,level,clock,startAt,moves}=g;
+  const bag=makeBag(room+':'+(g.gameNo||1));
+  const board=new Array(225).fill(null);
+  const racks=[bag.slice(0,7),bag.slice(7,14)];
+  let p=14,turn=g.first||0,dead=0,ended=false,reason='';
+  let now=Math.max(0,(nowSec||startAt)-startAt);
+  const scores=[0,0], spent=[0,0], log=[], preState=[];
+  let cur=0, burst=null, burstEnd=Infinity, toAt=null, loser=null, paused=false, pausedBy=-1;
+  const cleared=[0,0];
+  const spent2=()=>p>=bag.length;
+  const outOfTiles=i=>racks[i].length===0&&spent2();
+  const draw=(rk,k)=>{while(k-->0&&p<bag.length)rk.push(bag[p++]);};
+
+  function charge(to){
+    if(ended||!clock||paused) { cur=Math.max(cur,to); return; }
+    let guard=0;
+    while(cur<to && !ended && guard++<8){
+      if(burst===null){
+        const room_=clock-spent[turn];
+        if(to-cur>=room_){
+          spent[turn]=clock; toAt=cur+room_; loser=turn; cur=toAt;
+          log.push({mi:-1,turn:loser,type:'T'});
+          if(scores[1-turn]>scores[turn]){ ended=true; reason='time'; return; }
+          burst=1-turn; turn=burst;
+          burstEnd=toAt+Math.min(60,clock-spent[burst]);
+          continue;
+        }
+        spent[turn]+=to-cur; cur=to;
+      }else{
+        if(to>=burstEnd){
+          spent[burst]+=burstEnd-cur; cur=burstEnd;
+          ended=true; reason='time'; return;
+        }
+        spent[burst]+=to-cur; cur=to;
+      }
+    }
+    cur=Math.max(cur,to);
+  }
+
+  for(let mi=0;mi<moves.length;mi++){
+    const m=moves[mi];
+    charge(m.dt);
+    if(ended) break;
+    const rk=racks[turn];
+    if(m.t==='U'){ paused=true; pausedBy=turn; log.push({mi,turn,type:'U'}); continue; }
+    if(m.t==='R'){ paused=false; pausedBy=-1; cur=Math.max(cur,m.dt); log.push({mi,turn,type:'R'}); continue; }
+    if(m.t==='D'){ ended=true; reason='dead'; log.push({mi,turn,type:'D'}); break; }
+    if(m.t==='F'){ log.push({mi,turn,type:'F',word:m.word}); continue; }
+    preState.push({mi,turn,board:board.slice(),rack:rk.slice()});
+    if(m.t==='P'){
+      const ev=evaluate(board,m.tiles,dict);
+      for(const t of m.tiles){
+        const need=t.blank?'_':t.L;
+        const i=rk.indexOf(need); if(i>=0) rk.splice(i,1);
+        board[t.r*15+t.c]={L:t.L,blank:t.blank,mi};
+      }
+      const sc=ev.ok?ev.score:0;
+      scores[turn]+=sc;
+      log.push({mi,turn,type:'P',score:sc,words:ev.ok?ev.words.map(w=>w.word):[],bingo:!!ev.bingo});
+      draw(rk,m.tiles.length); dead=0;
+      if(rk.length===0&&p>=bag.length&&!cleared[turn]){
+        cleared[turn]=1; scores[turn]+=OUT_BONUS;
+        log.push({mi:-1,turn,type:'OUT',bonus:OUT_BONUS});
+      }
+    }else if(m.t==='E'){
+      for(const c of m.letters){const i=rk.indexOf(c); if(i>=0) rk.splice(i,1);}
+      draw(rk,m.letters.length);
+      for(const c of m.letters) bag.push(c);
+      log.push({mi,turn,type:'E',score:0,n:m.letters.length}); dead++;
+    }else{ log.push({mi,turn,type:'X',score:0}); dead++; }
+    if(outOfTiles(0)&&outOfTiles(1)&&!ended){ ended=true; reason='out'; }
+    if(dead>=6&&burst===null&&!ended){ ended=true; reason='dead'; }
+    // a player with nothing left to play is skipped, not waited on
+    if(burst===null&&!ended) turn = outOfTiles(1-turn) ? turn : 1-turn;
+    if(ended) break;
+  }
+  if(!ended) charge(now);
+
+  const rem=[Math.max(0,clock-spent[0]),Math.max(0,clock-spent[1])];
+  return {board,racks,scores,turn,ended,reason,burst,burstEnd,toAt,loser,rem,spent,paused,pausedBy,
+          first:g.first||0,
+          left:Math.max(0,bag.length-p),log,preState,moveCount:moves.length,
+          burstLeft:burst!==null&&!ended?Math.max(0,burstEnd-Math.max(cur,now)):0};
+}
+
+/* ---------------- solver ---------------- */
+function prepWords(dict){
+  const arr=[];
+  for(const w of dict) if(w.length<=8) arr.push(w.toUpperCase());
+  arr.sort((a,b)=>{let sa=0,sb=0;for(const c of a)sa+=VAL[c];for(const c of b)sb+=VAL[c];return sb-sa;});
+  return arr;
+}
+function counts(s){const m={};for(const c of s)m[c]=(m[c]||0)+1;return m;}
+function findBest(board,rack,dict,words,budgetMs){
+  const t0=Date.now(); const anchors=[];
+  if(board.every(x=>!x)) anchors.push(112);
+  else for(let i=0;i<225;i++){
+    if(board[i])continue;
+    const r=(i/15)|0,c=i%15;
+    if((r>0&&board[i-15])||(r<14&&board[i+15])||(c>0&&board[i-1])||(c<14&&board[i+1])) anchors.push(i);
+  }
+  const rc=counts(rack.join('')); const blanks=rc['_']||0;
+  const bc={}; for(const t of board) if(t&&!t.blank) bc[t.L]=(bc[t.L]||0)+1;
+  let best=null,n=0,complete=true;
+  for(const W of words){
+    if((n++&1023)===0&&Date.now()-t0>budgetMs){ complete=false; break; }
+    const wc=counts(W); let need=0,ok=true;
+    for(const ch in wc){
+      const short=wc[ch]-(rc[ch]||0);
+      if(short>0){need+=short; if(short>(bc[ch]||0)+blanks){ok=false;break;}}
+    }
+    if(!ok||need>W.length-1) continue;
+    for(const dir of [1,15]) for(const a of anchors) for(let k=0;k<W.length;k++){
+      const start=a-k*dir; if(start<0) continue;
+      const sr=(start/15)|0, sc=start%15;
+      if(dir===1){ if(sc+W.length>15) continue; } else { if(sr+W.length>15) continue; }
+      const pre=start-dir, post=start+W.length*dir;
+      if(pre>=0&&(dir===1?sc>0:start>=15)&&board[pre]) continue;
+      if(post<225&&(dir===1?sc+W.length<15:sr+W.length<15)&&board[post]) continue;
+      const pl=[],used={}; let fit=true;
+      for(let j=0;j<W.length;j++){
+        const idx=start+j*dir,on=board[idx];
+        if(on){ if(on.L!==W[j]){fit=false;break;} continue; }
+        const ch=W[j]; used[ch]=(used[ch]||0)+1;
+        if(used[ch]>(rc[ch]||0)){
+          used['_']=(used['_']||0)+1;
+          if(used['_']>blanks){fit=false;break;}
+          pl.push({r:(idx/15)|0,c:idx%15,L:ch,blank:true});
+        } else pl.push({r:(idx/15)|0,c:idx%15,L:ch,blank:false});
+      }
+      if(!fit||!pl.length) continue;
+      const ev=evaluate(board,pl,dict);
+      if(ev.ok&&(!best||ev.score>best.score)){
+        const laid=new Set(pl.map(p=>p.r*15+p.c));
+        const main=ev.words.find(w=>[...laid].every(i=>w.cells.includes(i)))||ev.words[0];
+        best={score:ev.score,words:ev.words.map(x=>x.word),main:main.word,tiles:pl};
+      }
+    }
+  }
+  return {best,complete};
+}
+/** Can this exact word still be placed anywhere on the board with this rack?
+    Checking the old coordinates is not enough: after WAXED/PAW the square may
+    be taken, yet TAKE can still be built somewhere else off the same letters. */
+function wordPlayable(W,board,rack,dict){
+  const anchors=[];
+  if(board.every(x=>!x)) anchors.push(112);
+  else for(let i=0;i<225;i++){
+    if(board[i])continue;
+    const r=(i/15)|0,c=i%15;
+    if((r>0&&board[i-15])||(r<14&&board[i+15])||(c>0&&board[i-1])||(c<14&&board[i+1])) anchors.push(i);
+  }
+  const rc=counts(rack.join('')); const blanks=rc['_']||0;
+  for(const dir of [1,15]) for(const a of anchors) for(let k=0;k<W.length;k++){
+    const start=a-k*dir; if(start<0) continue;
+    const sr=(start/15)|0, sc=start%15;
+    if(dir===1){ if(sc+W.length>15) continue; } else { if(sr+W.length>15) continue; }
+    const pre=start-dir, post=start+W.length*dir;
+    if(pre>=0&&(dir===1?sc>0:start>=15)&&board[pre]) continue;
+    if(post<225&&(dir===1?sc+W.length<15:sr+W.length<15)&&board[post]) continue;
+    const pl=[],used={}; let fit=true;
+    for(let j=0;j<W.length;j++){
+      const idx=start+j*dir,on=board[idx];
+      if(on){ if(on.L!==W[j]){fit=false;break;} continue; }
+      const ch=W[j]; used[ch]=(used[ch]||0)+1;
+      if(used[ch]>(rc[ch]||0)){
+        used['_']=(used['_']||0)+1;
+        if(used['_']>blanks){fit=false;break;}
+        pl.push({r:(idx/15)|0,c:idx%15,L:ch,blank:true});
+      } else pl.push({r:(idx/15)|0,c:idx%15,L:ch,blank:false});
+    }
+    if(!fit||!pl.length) continue;
+    if(evaluate(board,pl,dict).ok) return true;
+  }
+  return false;
+}
+/** Could this missed move still be played right now by `player`? */
+function stillOpen(m,S,player,dict){
+  // Same squares, same tiles from the hand, same score. The hint shows the
+  // score and the shape of the words, so it may only stay hidden while that
+  // exact move is still on the table. Anything less and it opens.
+  if(!m.tiles||!m.tiles.length) return false;
+  for(const p of m.tiles) if(S.board[p.r*15+p.c]) return false;
+  const have=counts(S.racks[player].join(''));
+  const need={}; for(const p of m.tiles){const k=p.blank?'_':p.L; need[k]=(need[k]||0)+1;}
+  for(const k in need) if((have[k]||0)<need[k]) return false;
+  const ev=evaluate(S.board,m.tiles,dict);
+  return ev.ok && ev.score===m.score;
+}
+
+if(typeof module!=='undefined') module.exports={evaluate,replay,makeBag,encodeGame,decodeGame,buildDict,findBest,prepWords,stillOpen,wordPlayable};
+
+/* ---------------- i18n ---------------- */
+const T={
+ en:{eyebrow:'One round before bed',
+  l_name:'I am',l_clock:'Time limit',
+  cl:['7 min','15 min','Custom','None'],
+  askmin:'How many minutes each?',
+  h_geo:'Adds countries, nationalities, capitals, US cities over 100k and US states. Two-word names run together: MEXICOCITY, NEWYORK.',
+  geoon:'Geography on',geooff:'Geography off',
+  newg:'Start a room (I go first)',join:'Join their room (I go second)',
+  lb_settings:'Change room or settings',
+  seat1:'Player 1',seat2:'Player 2',opens:'opens',pickname:'Tap your name first.',
+
+  bagl:'Tiles left',
+  play:'Play',recall:'Recall',shuffle:'Shuffle',pass:'Skip turn',exch:'Swap tiles',
+  invite:'Copy invite link',words:'Word log',newgame:'New game',
+  invited:'Invite link copied.',
+  lb_wait:'Waiting for your partner to join\u2026',
+  lb_ready:'Both here. Starting\u2026',
+  lb_cancel:'Back',
+  partner_on:'partner online',partner_off:'partner away',
+  synced:'Live sync on',syncing:'Connecting\u2026',off:'No sync address',
+  yourturn:'Your turn',youstart:'You start.',theystart:'They start.',
+  startwhy:'',sandbox:'Their move. Try tiles while you wait.',
+  me:'You',them:'Them',
+  e_line:'Tiles must go in one line.',e_gap:'There\u2019s a gap.',
+  e_center:'First word must cross the star.',e_touch:'Must touch an existing tile.',
+  e_word:'Not in the dictionary: ',e_single:'A word needs two letters.',
+  triedme:'Not in the dictionary: ',triedthem:'They tried: ',
+  passed:'skipped their turn',exchanged:' tiles swapped',bingo:'Bingo!',
+  better:'Better move: ',pts:' pts',adj:'Leftover tiles',
+  over:'Game over',win:'wins',won:'won',draw:'a tie',
+  youwin:'You win',theywin:'They win',tie:'Tied at',
+  end_time:'Time up',end_out:'Tiles gone',end_dead:'Ended on passes',
+  timeout:'Out of time',usedall:'Used all tiles',burstme:'Final minute. Keep playing.',burstthem:'They\u2019re finishing up',
+  pickblank:'This blank is which letter?',cancel:'Cancel',close:'Close',
+  exmode:'Pick tiles, then tap again',
+  pause:'Pause',paused:'Paused',resume:'Resume game',
+  pausedby_me:'You paused the clocks.',pausedby_them:'They paused the clocks.',
+  nomove:'Nothing can be made from these tiles. Swap some.',
+  deadend:'Neither of you can play. Game over.',
+  leftwith:'Left holding',couldhave:'Could still have played',
+  nothingleft:'Nothing could be made with these.',
+  bingonote:'Using all 7 tiles in one move scores 50 extra.',
+  histtitle:'Games',histnone:'No finished games yet.',hist:'History',
+  stats:'Stats',statsnone:'No games counted yet. Both players need to pick a name; stats start from the next finished game.',
+  st_won:'Games won',st_streak:'Current streak',st_best:'Best streak',
+  st_avg:'Average score',st_high:'Best game',st_bingo:'Bingos',
+  st_out:'Used all tiles',st_rate:'Best move found',
+  st_bw:'Best word',st_lw:'Longest word',st_letters:'letters',
+  st_recent:'Games',st_none:'\u2013',
+  histclear:'Clear all history',
+  histclearask:'Delete every recorded game? This cannot be undone.',
+  gamesplayed:'games played',lastgame:'Last game',moves:'moves',expand:'Expand',collapse:'Collapse',
+  notestitle:'Release notes',whatsnew:'See what changed',
+needdb:'Without a sync address the two phones won\u2019t connect. Start anyway?',
+  confirmpass:'Skip your turn? You score nothing.',
+  wordtitle:'Words played this game',missed:'Best moves missed',
+  missednote:'Boxed ones are still in play. They unlock once the chance is gone.',
+  tapword:'Tap a word for its meaning and an example.',loading:'Looking up\u2026',nodef:'No definition found.',
+  confirmnew:'Start a fresh game in this room?'}
+};
+const LANG='en';
+const t=k=>T[LANG][k];
+
+/* ---------------- app ---------------- */
+if(typeof document!=='undefined') (function(){
+  const $=s=>document.querySelector(s);
+  let G=null, dict=null, words=null, me=0, S=null;
+  let pend=[], sel=-1, rackOrder=null, exMode=false, exPick=new Set();
+  const DEFAULT_DB='scrabble-69133-default-rtdb.firebaseio.com';
+  let live=false, poll=null, db=DEFAULT_DB, pulling=false, lastSeen='', tickT=null;
+  let flash=null, seenF=0, sig='', lobbyT=null, lastPartner=0, beatN=0, myBeat=0;
+  let noMove=false, noMoveSig=null, leftover=null, history=null, feedJump=false;
+  /* who to call each side: real names once they are set, otherwise you/them */
+  const nm=s0=> PEOPLE[s0] || (s0?t('seat2'):t('seat1'));
+  const missed={}, defCache={}; let solvingNow=false;
+  const level=1;   // geography is always on
+  let clockSel=900;
+
+  const PEOPLE=['Junghyun','Hailey'];
+  const NOTES=[["2026.11.01", [["Games start right away again", "Opening a game threw an error behind the scenes: the page tried to draw a board for a game whose state had not been worked out yet. Nothing showed, but the lobby only noticed the new game on its next check, so starting took about two seconds longer than it should have."]]], ["2026.10.10", [["A name could still be wiped, and this time it was my fix that did it", "Thursday's change gave each seat its own slot so neither phone could overwrite the other. It also added a line that released your old slot when you changed seats, and that line wrote to the other seat. If you had opened Stats or History before starting, your phone was holding an out-of-date picture of who sat where, and saving your name blanked your partner's. It only showed up on games where you swapped who opens, which is why the first game was fine and the second was not."], ["Names are stored per person now", "Each of you owns one entry saying which seat you took and when. Nobody writes to anybody else's, so no order of taps can erase a name. Sixteen combinations of ordering and seating were checked and none loses one."], ["The half-named game is repaired", "There are only two of you, so a record with one name filled in says who the other was. Games stored that way are now read back complete and count towards stats again."], ["Your name is now your seat", "Junghyun is always player 1 and Hailey always player 2. Keeping the person and the slot as two separate things is what every name bug grew out of: the app had to agree on who sat where, and the two phones could disagree. There is nothing left to agree on, so the seat-clash warning, the name sync and the slot-release logic are all gone."], ["The buttons only choose who opens", "They used to pick your seat and the opening move at the same time. Now they set one thing, stored as a single shared value that the later tap wins, and the lobby shows the result so you can see it before the game starts."], ["Smaller first screen", "The room is one line with a Change link instead of a text box, and the start buttons stay disabled until you have tapped your name, which was the one step that quietly broke everything downstream when skipped."], ["No more room code", "It was a fixed value you never typed, so it is now built in. The first screen is down to who you are, the clock, and which of you opens."], ["Running out of tiles no longer ends the game", "Clear your rack and play passes to whoever still has tiles, who keeps going on their own until they are out too. The game ends when neither of you holds a tile, when neither of you can play, or on the clock. The 20 points go to each of you who empties a rack, so both can earn it in the same game."], ["Longest word was showing the wrong word", "The card paired the longest length with your highest-scoring word, which are usually not the same play. The longest word is now kept as itself, and a tie goes to the most recent one. Words played is gone from stats: in a turn-based game the two of you are always within a move of each other."]]], ["2026.10.06", [["One of the two names kept vanishing", "Both phones were reading the pair of names, editing their half and writing the pair back. Start within a second of each other and the later write replaced the earlier one, so whoever moved second was the only name left and the other showed up as Player 1. Each seat now has its own slot, so neither of you can overwrite the other."], ["Sheets scroll properly", "The title and the buttons stay put while the list moves, so Close is always where you left it instead of at the end of a long history."]]], ["2026.10.05", [["A wider dictionary", "The cut-off moved from the 50,000 to the 65,000 most-used words, adding about 5,000 entries. SATIETY was one of the casualties: it sat at 53,838 while SATE, at 48,468, was in, which is why one worked and the other did not. SATIATE, DIADEM and ERUDITION come in with it."], ["Stats, and a separate History", "Three buttons on the first screen now: Stats, History and these notes. Stats compares the two of you on games won, current and best streak, average and best game score, bingos, racks cleared, words played, and how often each of you found the highest-scoring move available, with cards for your best and longest words. It counts games from today onwards only, since older results recorded neither names nor any of these figures. History is the plain list of every game ever played."], ["Last game on the opening screen", "Who won the previous game now sits at the top of the first screen, so you do not have to open anything to see it."], ["Games end when neither of you can move", "With an empty bag and no playable word on either rack, the game now ends on the spot. The rule of six consecutive passes was still being applied, which meant tapping Skip three times each to finish a game that was already over."], ["Names are a choice, not a text box", "Pick Junghyun or Hailey on the first screen. Typing them meant a stray space or capital could stop the two from matching, and whoever had not typed theirs showed up as Player 1. Stats and history are filed by name, so both of you need to pick before a game for the record to come out right."], ["Geography is always on", "The setting is gone. It was never going to be switched off."]]], ["2026.09.22", [["Missed moves open as soon as that exact move is gone", "A hidden hint now stays hidden only while the very same move can still be played: the same squares, the same tiles in hand, the same score. Spend a letter it needed or let one of its squares get taken, and it opens at once. Playing HIM with the H that an AH needed now reveals the AH straight away, instead of a turn later. Once a hint is open, either of you is free to grab the idea."], ["Hints no longer lag behind", "The search for missed moves used to start one at a time, only when the board changed, so a second one could sit waiting a whole turn. They now run back to back."], ["Clearing your rack is worth 20", "Play your last tile once the bag is empty and you take 20 points with you. It counts during the final minute too. A game that ends on the clock has no bonus, since nobody ran out of tiles."], ["The button decides who opens", "Tap the first button and you open the game; tap the second and your partner does. The old rule where the previous game's loser opened has been dropped, because it quietly overruled the buttons from the second game onward."], ["History could flip on you", "Results were filed by seat and read back from whichever seat you happened to be in, so taking the other button once rewrote every past game: a loss became a win. Names are now stored with each result, so nothing moves. Older rows show as Player 1 and Player 2, since there is no way to tell who was who; there is a button to clear them."]]], ["2026.09.17", [["Proper nouns cleaned up", "JUNE and IRAN were never playable, which is correct: Scrabble does not allow proper nouns. ZAIRE slipped in because usage counts ignore capitals, so the country's frequency propped up the lowercase currency word. 83 of these were removed. Better still, 95 words turned out to have an ordinary meaning the dictionary was ignoring: ATLAS is a book of maps again, ARK is Noah's, CANTON is an administrative district, CHIHUAHUA is the dog."], ["Geography, as a setting", "Countries, nationalities, capitals, every US city over 100,000 people and all 50 states. Two-word names run together, so MEXICOCITY and NEWYORK count. Turn it off for a plain game."], ["One word list instead of three", "Everyday and Wider are gone. There is a single 42,000-word list, the old Normal, so there is nothing to agree on before a game."], ["65 food words", "kimchi, queso, ramen, bulgogi, bibimbap, gnocchi, quinoa, boba and friends. Always on, whatever Geography says. Korean dishes show their Korean name in the word log."], ["Time limits: 7, 15, or your own number", "Custom takes any number of minutes up to 180, and it travels with the invite link so both phones match."], ["Reorder your rack by dragging", "Drag a tile to a different spot in the rack and it slots in there. Shuffle is no longer the only way to move things around."], ["Leftover tiles get explained", "When a game ends, both players see what they were still holding and the best word those tiles could have made."], ["Game history", "Every finished game with the date and score, plus your running record at the top. It keeps everything, not a recent handful."], ["Missed-move hints stopped spoiling themselves", "A hidden word used to be revealed as soon as its original square was taken. But after playing PAW down through WAXED you can often still build TAKE somewhere else. Now the whole board is rechecked, and the word stays hidden while it can be played anywhere at all."], ["A room you keep", "The room code no longer doubles as the game. It stays the same forever and each night opens a fresh game inside it, so nobody types a code again."], ["The loser opens the next game", "Seats stay with whoever chose them, so the last game's loser is the one who starts the next. A tie passes the opening move to whoever went second."], ["Names", "Put your name on the first screen and it replaces Player 1 on the scoreboard, in the move log and in history."], ["The move log keeps the whole game", "It used to show the last fourteen lines. Now it holds every move, can be expanded to half the screen, and stops yanking you back to the bottom while you are reading."], ["These release notes", "A dot appears next to the button when something has changed since you last looked."]]], ["Old", [["Only words people actually use", "A word gets in if it is spelled validly, turns up in real usage, and has a meaning we can show you. That removes QI, ZA, XU, QAT and the rest of the Scrabble-dictionary curiosities without touching normal vocabulary. British spellings included."], ["Words are judged whole, not form by form", "The commonest form of a word decides the whole family. Before this, HURLED and HURLING were playable while HURL was not, because the past tense happens to be more common. WINCE, DOZE and GULP were missing for the same reason."], ["Both phones share one clock", "Each move records when it happened, so the two phones calculate the same remaining time instead of each counting from when it opened."], ["The clock runs like a chess clock", "It only ticks on your turn. When it hits zero your partner gets a final minute to play as many moves as they can, but only if they are behind. If they are already ahead the game simply ends."], ["Scoring is just the words you made", "No leftover-tile penalties, no bonus for going out first. Using all seven tiles in one move still scores 50 extra."], ["Play while you wait", "Tiles can be placed during your partner's turn. A valid word outlines itself in green and shows what it would score."], ["Drag tiles onto the board", "Drag from the rack, from square to square, or back to the rack. Tapping still works the same way."], ["Definitions and examples built in", "Every playable word has a meaning stored in the page, so it opens instantly and works offline, with Korean meanings where available. Examples that did not contain their own word were removed: KEN used to be illustrated by a sentence about sight."], ["The best move you missed", "After each move the board is searched for the highest-scoring play that was available. If it beat what you played, the word appears as boxes and unlocks once the chance is gone."], ["A warning when nothing can be played", "If no word can be made from your tiles anywhere on the board, you are told, and the swap button starts pulsing."], ["A waiting room", "You both start at the same moment, and the clock starts then too."], ["Pause", "Stops both clocks. Either of you can resume."]]]];
+  const nowSec=()=>Date.now()/1000;
+  async function sGet(k,sh){try{const r=await window.storage.get(k,sh);return r?r.value:null;}catch(e){return null;}}
+  async function sSet(k,v,sh){try{await window.storage.set(k,v,sh);return true;}catch(e){return false;}}
+
+  function paintLang(){
+    document.querySelectorAll('[data-t]').forEach(el=>{const k=el.dataset.t;if(T[LANG][k])el.textContent=T[LANG][k];});
+    document.querySelectorAll('#clockSeg button').forEach((b,i)=>b.textContent=t('cl')[i]);
+    $('#btnNew').textContent=t('newg'); $('#btnJoin').textContent=t('join');
+    $('#bPlay').textContent=t('play'); $('#bRecall').textContent=t('recall');
+    $('#bShuffle').textContent=t('shuffle'); $('#bInvite').textContent=t('invite');
+    $('#blankCancel').textContent=t('cancel'); $('#wordClose').textContent=t('close');
+    $('#blankTitle').textContent=t('pickblank'); $('#wordTitle').textContent=t('wordtitle');
+    $('#bWords').textContent=t('words'); $('#bNewGame').textContent=t('newgame');
+    $('#bHist').textContent=t('hist'); $('#bStats').textContent=t('stats');
+    $('#histClose').textContent=t('close'); $('#histClear').textContent=t('histclear');
+    $('#notesTitle').textContent=t('notestitle'); $('#notesClose').textContent=t('close');
+    paintNotesButton();
+    $('#bPause').textContent=t('pause'); $('#bResume').textContent=t('resume');
+    $('#pauseTitle').textContent=t('paused');
+    if(S) render();
+  }
+
+  const ROOM='BED';   // just the two of us, one room, forever
+  document.querySelectorAll('#clockSeg button').forEach(b=>b.onclick=()=>{
+    let v=+b.dataset.cl;
+    if(v===-1){
+      const m=parseFloat(prompt(t('askmin'),'20')||'');
+      if(!(m>0&&m<=180)) return;
+      v=Math.round(m*60); b.textContent=(m%1?m:m|0)+' min';
+    }else if(b.dataset.cl==='-1') b.textContent=t('cl')[2];
+    document.querySelectorAll('#clockSeg button').forEach(x=>{
+      x.classList.remove('on');
+      if(x.dataset.cl==='-1'&&x!==b) x.textContent=t('cl')[2];
+    });
+    b.classList.add('on'); clockSel=v;});
+
+  $('#btnNew').onclick=()=>start(true,true);
+  $('#btnJoin').onclick=()=>start(false,true);
+
+  /* ---- presence: one flat key per seat, so the two phones never
+         overwrite each other's heartbeat ---- */
+  function pURL(seat){
+    return 'https://'+db.replace(/^https?:\/\//,'').replace(/\/$/,'')
+      +'/g/'+G.room+'_p'+seat+'.json';
+  }
+  const SID=Math.random().toString(36).slice(2,7);
+  const DID=(function(){
+    let v=''; try{ v=localStorage.getItem('nsb_did')||''; }catch(e){}
+    if(!v){ v=Math.random().toString(36).slice(2,8);
+            try{ localStorage.setItem('nsb_did',v); }catch(e){} }
+    return v;
+  })();
+  async function beat(){
+    if(!G||!db) return;
+    try{ await fetch(pURL(me),{method:'PUT',body:JSON.stringify(SID+'~'+b36(nowSec()))}); }catch(e){}
+  }
+  async function seatSeen(seat){
+    if(!G||!db) return {sid:'',t:0};
+    try{
+      const r=await fetch(pURL(seat),{cache:'no-store'});
+      if(!r.ok) return {sid:'',t:0};
+      const v=await r.json();
+      if(typeof v!=='string') return {sid:'',t:0};
+      const i=v.indexOf('~');
+      if(i<0) return {sid:'?',t:parseInt(v,36)||0};
+      return {sid:v.slice(0,i),t:parseInt(v.slice(i+1),36)||0};
+    }catch(e){ return {sid:'',t:0}; }
+  }
+  const partnerHere=()=>nowSec()-lastPartner<14;
+
+  function seatKey(){ return 'nsb_seat_'+G.room; }
+  /* Two people, fixed seats: Junghyun is always 1, Hailey always 2. With the
+     name and the seat being the same thing there is nothing left to agree on,
+     and the whole class of "who is in which slot" bugs disappears. */
+  async function setOpener(name){ await kPut(G.room+'_OPEN', name); }
+  async function getOpener(){
+    const v=clean(await kGet(G.room+'_OPEN')||'');
+    return PEOPLE.includes(v)?v:PEOPLE[0];
+  }
+  let myPick='';
+  document.querySelectorAll('#nameSeg button').forEach(b=>{
+    b.textContent=b.dataset.nm;
+    b.onclick=()=>{
+      myPick=b.dataset.nm;
+      me=PEOPLE.indexOf(myPick);
+      document.querySelectorAll('#nameSeg button').forEach(x=>x.classList.toggle('on',x===b));
+      try{ localStorage.setItem('nsb_name',myPick); }catch(e){}
+      readyCheck();
+    };
+  });
+
+  async function paintOpener(){
+    const op=await getOpener();
+    $('#lbSeat').textContent=(op===myPick?t('youstart'):op+' '+t('opens'));
+  }
+  function showLobby(){
+    $('#setup').classList.add('hidden');
+    $('#game').classList.add('hidden');
+    $('#lobby').classList.remove('hidden');
+    $('#lbRoom').textContent=PEOPLE.join('  ·  ');
+    $('#lbText').textContent=t('lb_wait');
+    $('#lbSeat').textContent=nm(me)+' \u00b7 '+t(me?'seat2':'seat1');
+    $('#lbInvite').textContent=t('invite');
+    $('#lbCancel').textContent=t('lb_cancel');
+    $('#lbSettings').textContent=t('lb_settings');
+  }
+  $('#lbInvite').onclick=async()=>{
+    try{await navigator.clipboard.writeText(inviteLink());}catch(e){prompt('',inviteLink());}
+    $('#lbInvite').textContent=t('invited');
+    setTimeout(()=>$('#lbInvite').textContent=t('invite'),2500);
+  };
+  $('#lbCancel').onclick=()=>{
+    if(lobbyT) clearInterval(lobbyT);
+    G=null; $('#lobby').classList.add('hidden'); $('#setup').classList.remove('hidden');
+  };
+
+  function lobbyLoop(){
+    if(lobbyT) clearInterval(lobbyT);
+    const step=async()=>{
+      await beat();
+      const other=await seatSeen(1-me);
+      if(other.t>lastPartner) lastPartner=other.t;
+
+      paintOpener();
+      const remote=await remoteGet();
+      let stale=null;
+      if(remote){
+        const d=decodeGame(remote);
+        if(d&&d.room===G.room){
+          const st=replay(d,buildDict(d.level),nowSec());
+          if(!st.ended){
+            G=d; dict=buildDict(d.level); words=prepWords(dict); lastSeen=remote;
+            return enterGame();
+          }
+          stale=d;                      // last night's game is finished: start the next one
+        }
+      }
+      const pulse=$('#lobby').querySelector('.pulse');
+
+      if(partnerHere()){
+        $('#lbText').textContent=t('lb_ready');
+        pulse.className='pulse on';
+        if(me===0){
+          G.gameNo=(stale?stale.gameNo:0)+1;
+          G.first=PEOPLE.indexOf(await getOpener());
+          G.startAt=Math.round(nowSec());
+          G.moves=[];
+          await push();
+          return enterGame();
+        }
+      }else{
+        $('#lbText').textContent=t('lb_wait');
+        pulse.className='pulse';
+      }
+    };
+    step();
+    lobbyT=setInterval(step, 1800+Math.floor(Math.random()*700));   // jitter breaks symmetry
+  }
+
+  function enterGame(){
+    if(lobbyT) clearInterval(lobbyT);
+    $('#lobby').classList.add('hidden');
+    $('#game').classList.remove('hidden');
+    buildBoard(); refresh(true); startPoll();
+    if(tickT) clearInterval(tickT);
+    tickT=setInterval(()=>{ refresh(false); if(beatN++%5===0) beat(); },400);
+  }
+
+  function readyCheck(){
+    const ok=PEOPLE.includes(myPick);
+    $('#btnNew').disabled=!ok; $('#btnJoin').disabled=!ok;
+    return ok;
+  }
+  async function start(iOpen,save){
+    const room=ROOM;
+    if(!PEOPLE.includes(myPick)){ alert(t('pickname')); return; }
+    if(save){ try{ localStorage.setItem('nsb_cfg',JSON.stringify(
+        {clock:clockSel})); }catch(e){} }
+    me=PEOPLE.indexOf(myPick); lastPartner=0;
+    const opener=iOpen?myPick:PEOPLE[1-me];
+    G={room,level,clock:clockSel,startAt:Math.round(nowSec()),gameNo:1,
+       first:PEOPLE.indexOf(opener),moves:[]};
+    dict=buildDict(level); words=prepWords(dict);
+    await setOpener(opener);
+    showLobby(); lobbyLoop();
+  }
+
+  function buildBoard(){
+    const b=$('#board'); b.innerHTML='';
+    for(let i=0;i<225;i++){
+      const d=document.createElement('div');
+      d.className='c '+(PREM[i]||''); d.dataset.i=i;
+      d.onclick=()=>tapCell(i); b.appendChild(d);
+    }
+  }
+  const premLabel=i=>PREM[i]==='star'?'★':(PREM[i]?PREM[i].toUpperCase():'');
+
+  /* recompute state from the shared record + the current time */
+  function refresh(force){
+    if(!G) return;
+    S=replay(G,dict,nowSec());
+    if(pend.length&&pend.some(p=>S.board[p.r*15+p.c])) pend=[];
+    syncRack();
+    const ns=[S.moveCount,S.turn,S.ended,S.burst,S.left,S.scores.join('/')].join('|');
+    const changed=ns!==sig; sig=ns;
+    if(changed||force){ noteFailures(); queueSolve(); checkMoves();
+      if(S.ended){ setTimeout(leftoverReport,200); recordGame(); } render(); }
+    else { paintClocks(); paintBurst(); paintPreview(); }
+  }
+  function syncRack(){
+    const r=S.racks[me].slice();
+    if(rackOrder){
+      const out=[],pool=r.slice();
+      for(const c of rackOrder){const i=pool.indexOf(c); if(i>=0)out.push(pool.splice(i,1)[0]);}
+      rackOrder=out.concat(pool);
+      if(rackOrder.length!==r.length) rackOrder=r;
+    } else rackOrder=r;
+  }
+  const myTurn=()=>!S.ended&&S.turn===me;
+
+  function fmt(sec){sec=Math.max(0,Math.round(sec));return Math.floor(sec/60)+':'+String(sec%60).padStart(2,'0');}
+  function paintClocks(){
+    for(const s of [0,1]){
+      const el=$('#s'+s).querySelector('.clock');
+      if(!G.clock){el.textContent='';continue;}
+      el.textContent=fmt(S.rem[s]);
+      el.className='clock'+(S.rem[s]<60?' low':'');
+    }
+  }
+  function paintBurst(){
+    const b=$('#burst');
+    if(S.burst!==null&&!S.ended){
+      b.className='on';
+      $('#burstLb').textContent=S.burst===me?t('burstme'):t('burstthem');
+      $('#burstT').textContent=fmt(S.burstLeft);
+    } else b.className='';
+  }
+
+  /* transient "tried X" notice, never kept in the log */
+  function noteFailures(){
+    const fs=S.log.filter(l=>l.type==='F');
+    if(fs.length>seenF){
+      const l=fs[fs.length-1];
+      flash={text:(l.turn===me?t('triedme'):t('triedthem'))+l.word,until:Date.now()+7000};
+      if(l.turn!==me&&navigator.vibrate) navigator.vibrate(40);
+    }
+    seenF=fs.length;
+  }
+
+  function paintPreview(){
+    const pv=$('#preview');
+    if(S.ended){
+      const [a,b]=S.scores;
+      const who=a===b?t('tie'):((a>b?0:1)===me?t('youwin'):t('theywin'));
+      pv.innerHTML='<span class="over">'+t('over')+'. '+who+' '+a+' : '+b+'</span>';
+      return;
+    }
+    const ev=pend.length?evaluate(S.board,pend,dict):null;
+    if(ev&&ev.ok){
+      pv.innerHTML='<span class="g">'+ev.words.map(w=>w.word).join(' · ')+'  '+ev.score+t('pts')
+        +(ev.bingo?' · '+t('bingo'):'')+'</span>'; return;
+    }
+    if(ev){
+      pv.innerHTML='<span class="b">'+(ev.err==='word'?t('e_word')+ev.word:(t('e_'+ev.err)||''))+'</span>'; return;
+    }
+    if(flash&&Date.now()<flash.until){ pv.innerHTML='<span class="f">'+flash.text+'</span>'; return; }
+    if(noMove&&myTurn()){ pv.innerHTML='<span class="f">'+t('nomove')+'</span>'; return; }
+    if(!S.moveCount){
+      pv.innerHTML=(S.first===me?t('youstart'):t('theystart'));
+      return;
+    }
+    pv.textContent=myTurn()?t('yourturn'):t('sandbox');
+  }
+
+  function render(){
+    if(!S) return;        // the first push of a new game happens before its state exists
+    const cells=$('#board').children;
+    let lastPlay=-1;
+    for(let i=S.log.length-1;i>=0;i--) if(S.log[i].type==='P'){lastPlay=S.log[i].mi;break;}
+    const ev=pend.length?evaluate(S.board,pend,dict):null;
+    const valid=ev&&ev.ok;
+    for(let i=0;i<225;i++){
+      const c=cells[i], t0=S.board[i];
+      const p=pend.find(x=>x.r*15+x.c===i);
+      if(t0||p){
+        const L=p?p.L:t0.L, bl=p?p.blank:t0.blank;
+        c.className='c t'+(bl?' bl':'')+(p?' pend'+(valid?' valid':''):'')
+                    +((!p&&t0.mi===lastPlay&&lastPlay>=0)?' glow':'');
+        c.innerHTML=L+(bl?'':'<span class="v">'+VAL[L]+'</span>');
+        c.onpointerdown=p?(e=>dragStart(e,'board',i)):null;
+      }else{ c.className='c '+(PREM[i]||''); c.innerHTML=premLabel(i); c.onpointerdown=null; }
+    }
+    const used={}; for(const p of pend){const k=p.blank?'_':p.L; used[k]=(used[k]||0)+1;}
+    const rk=$('#rack'); rk.innerHTML=''; const cnt={};
+    rackOrder.forEach((ch,i)=>{
+      cnt[ch]=(cnt[ch]||0)+1;
+      const isUsed=(used[ch]||0)>=cnt[ch];
+      const d=document.createElement('div');
+      d.className='rt'+(isUsed?' gone':'')+(sel===i?' sel':'')+(exPick.has(i)?' ex':'');
+      d.innerHTML=(ch==='_'?'&nbsp;':ch)+(ch==='_'?'':'<span class="v">'+VAL[ch]+'</span>');
+      d.onclick=()=>tapRack(i,isUsed);
+      d.onpointerdown=e=>dragStart(e,'rack',i);
+      rk.appendChild(d);
+    });
+    for(const s of [0,1]){
+      const el=$('#s'+s);
+      el.className='score'+(!S.ended&&S.turn===s?' act':'');
+      el.querySelector('.nm').textContent=nm(s);
+      el.querySelector('.pt').textContent=S.scores[s];
+    }
+    $('#bagn').textContent=S.left;
+    $('#dot').className='dot'+(live?' live':'');
+    $('#syncState').textContent=(db?(live?t('synced'):t('syncing')):t('off'))
+      +' · '+(partnerHere()?t('partner_on'):t('partner_off'));
+    paintClocks(); paintBurst(); paintPreview();
+    $('#bPlay').className='pri'+(valid&&myTurn()?' valid':'');
+    const off=!myTurn()||S.paused;
+    $('#bPlay').disabled=off; $('#bExch').disabled=off;
+    $('#bPause').classList.toggle('frozen',S.ended);
+    const ps=$('#pauseSheet');
+    ps.className='sheet'+(S.paused&&!S.ended?' on':'');
+    if(S.paused) $('#pauseWho').textContent=S.pausedBy===me?t('pausedby_me'):t('pausedby_them');
+    $('#bExch').textContent = S.left>=7 ? t('exch') : t('pass');
+    $('#bExch').classList.toggle('urge', noMove&&myTurn());
+    renderFeed();
+  }
+
+  const boxes=n=>'<span class="box"></span>'.repeat(n);
+  function renderFeed(){
+    const f=$('#feed'); f.innerHTML='';
+    for(const l of S.log.filter(x=>x.type!=='F')){
+      const d=document.createElement('div');
+      d.className='ev'+(l.turn===me?' me':'');
+      let txt='';
+      if(l.type==='P'){
+        txt='<b>'+(l.words.join(', ')||'?')+'</b> '+l.score+t('pts')+(l.bingo?' · '+t('bingo'):'');
+        const m=missed[l.mi];
+        if(m&&m.score>l.score){
+          const hide=!S.ended&&stillOpen(m,S,l.turn,dict);
+          txt+='<div class="miss">'+t('better')
+            +(hide? m.words.map(w=>boxes(w.length)).join(' ') : '<b>'+m.words.join(', ')+'</b>')
+            +' '+m.score+t('pts')+'</div>';
+        }
+      }
+      else if(l.type==='U') txt=t('paused');
+      else if(l.type==='R') txt=t('resume');
+      else if(l.type==='X') txt=t('passed');
+      else if(l.type==='E') txt=l.n+t('exchanged');
+      else if(l.type==='OUT') txt='<b>'+t('usedall')+'</b> +'+l.bonus;
+      else if(l.type==='D') txt=t('deadend');
+      else if(l.type==='T') txt='<b>'+t('timeout')+'</b>';
+      else if(l.type==='ADJ') return;
+      d.innerHTML='<span class="who">'+(l.turn<0?'·':nm(l.turn))
+        +'</span><span class="txt">'+txt+'</span>';
+      f.appendChild(d);
+    }
+    if(S.ended){
+      const [a,b]=S.scores;
+      const who=a===b?t('draw'):nm(a>b?0:1)+' '+t('win');
+      const d=document.createElement('div');
+      d.className='ev';
+      d.innerHTML='<span class="who">·</span><span class="txt"><b>'+t('over')+'</b> ('
+        +t('end_'+S.reason)+') '+who+' · '+a+' : '+b+'</span>';
+      f.appendChild(d);
+      if(leftover){
+        for(const p of [0,1]){
+          const L=leftover[p]; if(!L||!L.rack.length) continue;
+          const e=document.createElement('div');
+          e.className='ev'+(p===me?' me':'');
+          e.innerHTML='<span class="who">'+nm(p)+'</span><span class="txt">'
+            +t('leftwith')+' <b>'+L.rack.map(c=>c==='_'?'?':c).join(' ')+'</b>'
+            +(L.best?'<div class="miss">'+t('couldhave')+' <b>'+L.best.words.join(', ')
+              +'</b> '+L.best.score+t('pts')+'</div>'
+             :'<div class="miss">'+t('nothingleft')+'</div>')+'</span>';
+          f.appendChild(e);
+        }
+      }
+    }
+    const atEnd = f.scrollHeight-f.scrollTop-f.clientHeight < 24;
+    if(atEnd||feedJump){ f.scrollTop=f.scrollHeight; feedJump=false; }
+    const plays=S.log.filter(l=>l.type==='P').length;
+    $('#feedCount').textContent=plays+' '+t('moves');
+    $('#bExpand').textContent=f.classList.contains('tall')?t('collapse'):t('expand');
+  }
+
+  /* ---- drag: works for touch and mouse, tapping still works too ---- */
+  let drag=null, muteClick=false;
+  const LIFT=0;
+
+  function dragStart(e,src,idx){
+    if(e.pointerType==='mouse'&&e.button!==0) return;
+    if(exMode) return;
+    let ch,blank=false,L=null;
+    if(src==='rack'){
+      ch=rackOrder[idx];
+      const used={}; for(const p of pend){const k=p.blank?'_':p.L; used[k]=(used[k]||0)+1;}
+      const cnt={}; let isUsed=false;
+      rackOrder.forEach((c,j)=>{cnt[c]=(cnt[c]||0)+1; if(j===idx) isUsed=(used[c]||0)>=cnt[c];});
+      if(isUsed) return;
+      L=ch; blank=(ch==='_');
+    }else{
+      const p=pend.find(x=>x.r*15+x.c===idx);
+      if(!p) return;
+      L=p.L; blank=p.blank; ch=blank?'_':p.L;
+    }
+    drag={src,idx,ch,L,blank,x0:e.clientX,y0:e.clientY,moved:false,ghost:null,over:null};
+    window.addEventListener('pointermove',dragMove,{passive:false});
+    window.addEventListener('pointerup',dragEnd);
+    window.addEventListener('pointercancel',dragEnd);
+  }
+
+  function dragMove(e){
+    if(!drag) return;
+    const dx=e.clientX-drag.x0, dy=e.clientY-drag.y0;
+    if(!drag.moved){
+      if(dx*dx+dy*dy<64) return;
+      drag.moved=true;
+      const g=document.createElement('div'); g.id='ghost';
+      g.textContent=drag.blank&&drag.src==='rack'?'':drag.L;
+      document.body.appendChild(g); drag.ghost=g;
+      if(drag.src==='rack') $('#rack').children[drag.idx].classList.add('lift');
+      else $('#board').children[drag.idx].classList.add('lift');
+    }
+    e.preventDefault();
+    const gx=e.clientX, gy=e.clientY-LIFT;
+    drag.ghost.style.left=gx+'px'; drag.ghost.style.top=gy+'px';
+    if(drag.over){drag.over.classList.remove('over');drag.over=null;}
+    $('#rackwrap').classList.remove('drop');
+    const el=document.elementFromPoint(gx,gy);
+    const cell=el&&el.closest?el.closest('#board .c'):null;
+    if(cell){
+      const i=+cell.dataset.i;
+      if(!S.board[i]&&!pend.some(p=>p.r*15+p.c===i&&i!==drag.idx)){
+        cell.classList.add('over'); drag.over=cell;
+      }
+    }else if(el&&el.closest&&el.closest('#rackwrap')&&drag.src==='board'){
+      $('#rackwrap').classList.add('drop');
+    }
+  }
+
+  function dragEnd(e){
+    window.removeEventListener('pointermove',dragMove);
+    window.removeEventListener('pointerup',dragEnd);
+    window.removeEventListener('pointercancel',dragEnd);
+    if(!drag) return;
+    const d=drag; drag=null;
+    if(d.over) d.over.classList.remove('over');
+    $('#rackwrap').classList.remove('drop');
+    if(d.ghost) d.ghost.remove();
+    document.querySelectorAll('.lift').forEach(x=>x.classList.remove('lift'));
+    if(!d.moved) return;
+    muteClick=true; setTimeout(()=>muteClick=false,350);
+
+    const gx=e.clientX, gy=e.clientY-LIFT;
+    const el=document.elementFromPoint(gx,gy);
+    const cell=el&&el.closest?el.closest('#board .c'):null;
+    if(cell){
+      const i=+cell.dataset.i, r=(i/15)|0, c=i%15;
+      if(S.board[i]||pend.some(p=>p.r*15+p.c===i&&i!==d.idx)){ render(); return; }
+      if(d.src==='board'){
+        const k=pend.findIndex(x=>x.r*15+x.c===d.idx);
+        if(k>=0) pend.splice(k,1);
+        pend.push({r,c,L:d.L,blank:d.blank}); sel=-1; render(); return;
+      }
+      if(d.blank){ askBlank(L=>{pend.push({r,c,L,blank:true});sel=-1;render();}); return; }
+      pend.push({r,c,L:d.L,blank:false}); sel=-1; render(); return;
+    }
+    const overRack=el&&el.closest&&el.closest('#rackwrap');
+    if(overRack&&d.src==='board'){
+      const k=pend.findIndex(x=>x.r*15+x.c===d.idx);
+      if(k>=0) pend.splice(k,1);
+    }else if(overRack&&d.src==='rack'){
+      // dropped back on the rack: slot the tile in where it was released
+      const tiles=[...$('#rack').children];
+      let to=tiles.length-1;
+      for(let i=0;i<tiles.length;i++){
+        const r=tiles[i].getBoundingClientRect();
+        if(gx < r.left+r.width/2){ to=i; break; }
+      }
+      const from=d.idx;
+      if(to!==from){
+        const arr=rackOrder.slice();
+        const [t0]=arr.splice(from,1);
+        arr.splice(to>from?to-1:to,0,t0);
+        rackOrder=arr;
+        const shift=p=>{};
+        sel=-1;
+      }
+    }
+    render();
+  }
+
+  /* ---- interaction ---- */
+  function tapRack(i,isUsed){
+    if(muteClick) return;
+    if(exMode){ if(exPick.has(i))exPick.delete(i); else exPick.add(i); render(); return; }
+    if(isUsed) return;
+    sel=sel===i?-1:i; render();
+  }
+  function tapCell(i){
+    if(muteClick) return;
+    const k=pend.findIndex(x=>x.r*15+x.c===i);
+    if(k>=0){pend.splice(k,1);render();return;}
+    if(S.board[i]||sel<0) return;
+    const ch=rackOrder[sel], r=(i/15)|0, c=i%15;
+    if(ch==='_'){ askBlank(L=>{pend.push({r,c,L,blank:true});sel=-1;render();}); return; }
+    pend.push({r,c,L:ch,blank:false}); sel=-1; render();
+  }
+  function askBlank(cb){
+    const m=$('#blankSheet'); m.className='sheet on';
+    const g=$('#letters'); g.innerHTML='';
+    for(let i=0;i<26;i++){
+      const L=String.fromCharCode(65+i);
+      const b=document.createElement('button'); b.textContent=L;
+      b.onclick=()=>{m.className='sheet';cb(L);}; g.appendChild(b);
+    }
+  }
+  $('#blankCancel').onclick=()=>$('#blankSheet').className='sheet';
+  $('#bRecall').onclick=()=>{pend=[];sel=-1;exMode=false;exPick.clear();render();};
+  $('#bShuffle').onclick=()=>{
+    for(let i=rackOrder.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));
+      [rackOrder[i],rackOrder[j]]=[rackOrder[j],rackOrder[i]];}
+    pend=[];sel=-1;render();};
+  $('#bPlay').onclick=()=>{
+    if(!myTurn()||S.paused||!pend.length) return;
+    const ev=evaluate(S.board,pend,dict);
+    if(!ev.ok){ if(ev.err==='word') commit({t:'F',word:ev.word}); else render(); return; }
+    commit({t:'P',tiles:pend.slice()});
+  };
+  $('#bExch').onclick=()=>{
+    if(!myTurn()||S.paused)return;
+    if(S.left<7){ if(confirm(t('confirmpass'))) commit({t:'X'}); return; }
+    if(!exMode){exMode=true;exPick.clear();pend=[];flash={text:t('exmode'),until:Date.now()+6000};render();return;}
+    if(!exPick.size){exMode=false;render();return;}
+    const letters=[...exPick].map(i=>rackOrder[i]);
+    exMode=false;exPick.clear(); commit({t:'E',letters});
+  };
+  $('#bNewGame').onclick=async()=>{
+    if(!confirm(t('confirmnew')))return;
+    G={room:G.room,level:G.level,clock:G.clock,gameNo:(G.gameNo||1)+1,
+       first:0,
+       startAt:Math.round(nowSec()),moves:[]};
+    rackOrder=null; pend=[]; sig=''; seenF=0; leftover=null; noMoveSig=null;
+    for(const k in missed) delete missed[k];
+    await push(); refresh(true);
+  };
+  $('#lbSettings').onclick=()=>{
+    if(lobbyT) clearInterval(lobbyT);
+    try{ localStorage.removeItem('nsb_cfg'); }catch(e){}
+    G=null; $('#lobby').classList.add('hidden'); $('#setup').classList.remove('hidden');
+  };
+
+  function commit(m){
+    m.dt=Math.max(0,Math.round(nowSec()-G.startAt));
+    G.moves.push(m); rackOrder=null;
+    if(m.t!=='F') pend=[];
+    refresh(true); push();
+  }
+
+  /* ---- when the game ends, show what the leftover tiles could have made ---- */
+  function leftoverReport(){
+    if(!S.ended||leftover!==null) return;
+    leftover={};
+    for(const p of [0,1]){
+      const rk=S.racks[p];
+      if(!rk.length){ leftover[p]={rack:[],best:null}; continue; }
+      const r=findBest(S.board,rk,dict,words,2500);
+      leftover[p]={rack:rk.slice(),best:r.best};
+    }
+    renderFeed();
+  }
+
+  /* ---- is there anything at all we can play? ---- */
+  function checkMoves(){
+    if(!S||S.ended||S.turn!==me){ noMove=false; return; }
+    const sg=S.moveCount+':'+S.racks[me].join('');
+    if(sg===noMoveSig) return;
+    noMoveSig=sg; noMove=false;
+    setTimeout(()=>{
+      if(!S||S.turn!==me||sg!==noMoveSig) return;
+      const r=findBest(S.board,S.racks[me],dict,words,5000);
+      noMove = r.complete && !r.best;
+      if(noMove&&navigator.vibrate) navigator.vibrate([30,60,30]);
+      paintPreview();
+      // with an empty bag there is nothing left to change, so if neither
+      // rack can play there is no point passing six times
+      if(noMove&&S.left===0&&!S.ended&&S.turn===me){
+        const o=findBest(S.board,S.racks[1-me],dict,words,5000);
+        if(o.complete&&!o.best) commit({t:'D'});
+      }
+    },150);
+  }
+
+  /* ---- solver: run for both players ---- */
+  function queueSolve(){
+    if(solvingNow||!S) return;
+    for(const p of S.preState){
+      if(missed[p.mi]!==undefined) continue;
+      if(!S.log.some(l=>l.mi===p.mi&&l.type==='P')) continue;
+      solvingNow=true;
+      const job=p, gid=G.gameNo;
+      setTimeout(()=>{
+        const r=findBest(job.board,job.rack,dict,words,1500);
+        solvingNow=false;
+        if(!G||G.gameNo!==gid){ queueSolve(); return; }   // a new game started meanwhile
+        missed[job.mi]=r.best||{score:0,words:[],tiles:[]};
+        if(S){ renderFeed(); queueSolve(); }
+      },80);
+      return;
+    }
+  }
+
+  /* ---- sync ---- */
+  function remoteURL(){return 'https://'+db.replace(/^https?:\/\//,'').replace(/\/$/,'')+'/g/'+G.room+'.json';}
+  async function remotePut(code){
+    if(!db) return await sSet('nsb:'+G.room,code,true);
+    try{const r=await fetch(remoteURL(),{method:'PUT',body:JSON.stringify(code)});return r.ok;}
+    catch(e){return false;}
+  }
+  async function remoteGet(){
+    if(!db) return await sGet('nsb:'+G.room,true);
+    try{const r=await fetch(remoteURL(),{cache:'no-store'});
+      if(!r.ok)return null; const v=await r.json();
+      return typeof v==='string'?v:null;}catch(e){return null;}
+  }
+  async function push(){
+    const code=encodeGame(G); lastSeen=code;
+    live=await remotePut(code); render();
+  }
+  function startPoll(){
+    if(poll) clearInterval(poll);
+    const beat=async()=>{
+      if(pulling)return; pulling=true;
+      const v=await remoteGet();
+      const ps=await seatSeen(1-me); if(ps.t>lastPartner) lastPartner=ps.t;
+      pulling=false;
+      if(v===null){ if(db){live=false;} return; }
+      live=true;
+      if(v===lastSeen) return;
+      const d=decodeGame(v);
+      if(d&&d.room===G.room&&(d.gameNo||1)>(G.gameNo||1)){
+        G=d; dict=buildDict(d.level); words=prepWords(dict);
+        rackOrder=null; lastSeen=v; sig=''; seenF=0; leftover=null;
+        for(const k in missed) delete missed[k];
+        refresh(true); return;
+      }
+      if(d&&d.room===G.room&&(d.gameNo||1)===(G.gameNo||1)&&d.moves.length>G.moves.length){
+        G=d; dict=buildDict(d.level); words=prepWords(dict);
+        rackOrder=null; lastSeen=v; refresh(true);
+        if(navigator.vibrate) navigator.vibrate(60);
+      }else if(d&&(d.gameNo||1)===(G.gameNo||1)&&d.moves.length<G.moves.length){ push(); }
+      else lastSeen=v;
+    };
+    beat(); poll=setInterval(beat,2500);
+  }
+  function inviteLink(){ return location.origin+location.pathname; }
+  $('#bInvite').onclick=async()=>{
+    try{await navigator.clipboard.writeText(inviteLink());}catch(e){prompt('',inviteLink());}
+    flash={text:t('invited'),until:Date.now()+5000}; paintPreview();
+  };
+
+  /* ---- word log ---- */
+  function seenNotes(){ try{ return localStorage.getItem('nsb_notes')||''; }catch(e){ return ''; } }
+  function paintNotesButton(){
+    const fresh = seenNotes() !== NOTES[0][0];
+    $('#bNotes').innerHTML = fresh
+      ? '<span class="new">\u25CF </span>'+t('notestitle')
+      : t('notestitle');
+  }
+  $('#bNotes').onclick=()=>{
+    $('#notesSheet').className='sheet on';
+    $('#notesList').innerHTML=NOTES.map(([when,items])=>
+      '<div class="rel"><div class="when">'+when+'</div>'
+      +items.map(([head,detail])=>
+         '<div class="item"><div class="hd">'+head+'</div>'
+         +'<div class="dt">'+detail+'</div></div>').join('')
+      +'</div>').join('');
+    try{ localStorage.setItem('nsb_notes',NOTES[0][0]); }catch(e){}
+    paintNotesButton();
+  };
+  $('#notesClose').onclick=()=>$('#notesSheet').className='sheet';
+
+  $('#bExpand').onclick=()=>{
+    const f=$('#feed'); f.classList.toggle('tall'); feedJump=true; renderFeed();
+  };
+  $('#bPause').onclick=()=>{ if(!S.ended&&!S.paused) commit({t:'U'}); };
+  $('#bResume').onclick=()=>{ if(S.paused) commit({t:'R'}); };
+
+  /* History is paged: one key per 200 games, so the 4000-character limit
+     on a single value stops being a ceiling on how much we can keep. */
+  const PAGE=40;
+  const kURL=k=>'https://'+db.replace(/^https?:\/\//,'').replace(/\/$/,'')+'/g/'+k+'.json';
+  async function kGet(k){
+    if(!db) return null;
+    try{ const r=await fetch(kURL(k),{cache:'no-store'});
+      if(!r.ok) return null; const v=await r.json();
+      return typeof v==='string'?v:null; }catch(e){ return null; }
+  }
+  async function kPut(k,v){
+    if(!db) return false;
+    try{ const r=await fetch(kURL(k),{method:'PUT',body:JSON.stringify(v)}); return r.ok; }
+    catch(e){ return false; }
+  }
+  const clean=v=>(v||'').replace(/[,:|]/g,' ').trim().slice(0,12);
+  const Z={B:0,O:0,S:0,W:'',L:0,P:0,F:0,V:''};
+  const unpack=g=>{
+    if(!g) return {...Z};
+    const p=g.split('~');
+    const k={B:+p[0]||0,O:+p[1]||0,S:+p[2]||0,W:p[3]||'',L:+p[4]||0,P:+p[5]||0,F:+p[6]||0,V:p[7]||''};
+    if(!k.V&&k.W.length===k.L) k.V=k.W;      // older rows only kept the best-scoring word
+    return k;
+  };
+  const pack=k=>[k.B,k.O,k.S,clean(k.W),k.L,k.P,k.F,clean(k.V)].join('~');
+  const parsePage=str=>(str||'').split(',').filter(Boolean).map(e=>{
+    const p=e.split(':');
+    return {t:parseInt(p[0],36)||0,a:+p[1]||0,b:+p[2]||0,n0:p[3]||'',n1:p[4]||'',
+            s0:unpack(p[5]),s1:unpack(p[6])};
+  });
+  /* names are stored with the result, so a later change of seats cannot
+     flip who won what */
+  const fmtEntry=g=>[b36(g.t),g.a,g.b,clean(g.n0),clean(g.n1),
+                     pack(g.s0||Z),pack(g.s1||Z)].join(':');
+
+  const fillNames=g=>{
+    const a=clean(g.n0), b=clean(g.n1);
+    if(a&&!b&&PEOPLE.includes(a)) return {...g,n1:PEOPLE.find(p=>p!==a)};
+    if(b&&!a&&PEOPLE.includes(b)) return {...g,n0:PEOPLE.find(p=>p!==b)};
+    return g;
+  };
+  async function loadHist(){
+    const idx=parseInt(await kGet('HIDX')||'0',10)||0;
+    const out=[];
+    for(let i=0;i<=idx;i++) out.push(...parsePage(await kGet('H'+i)));
+    if(!out.length){                      // fold in anything the old single-key version left
+      const legacy=await kGet('HISTORY');
+      if(legacy){ try{ for(const g of JSON.parse(legacy)) out.push({t:g.t,a:g.a,b:g.b,n0:'',n1:''}); }catch(e){} }
+    }
+    return out.map(fillNames);
+  }
+  async function recordGame(){
+    if(!db||!S.ended) return;
+    const stamp=G.startAt;
+    let idx=parseInt(await kGet('HIDX')||'0',10)||0;
+    let page=parsePage(await kGet('H'+idx));
+    if(!idx&&!page.length){
+      const legacy=await kGet('HISTORY');
+      if(legacy){ try{ page=JSON.parse(legacy).map(g=>({t:g.t,a:g.a,b:g.b,n0:'',n1:''})); }catch(e){} }
+    }
+    if(page.some(g=>g.t===stamp)) return;                 // already filed
+    if(page.length>=PAGE){ idx++; page=[]; await kPut('HIDX',String(idx)); }
+    /* everything the stats screen needs, worked out once from this game's log */
+    const k=[{...Z},{...Z}];
+    for(const l of S.log){
+      if(l.type==='OUT'&&l.turn>=0) k[l.turn].O=1;
+      if(l.type!=='P'||l.turn<0) continue;
+      const x=k[l.turn]; x.P++;
+      if(l.bingo) x.B++;
+      const main=(l.words||[]).reduce((p,q)=>q.length>p.length?q:p,'');
+      if(main.length>x.L){ x.L=main.length; x.V=main; }
+      if(l.score>x.S){ x.S=l.score; x.W=main; }
+      const m=missed[l.mi];
+      if(m&&m.score<=l.score) x.F++;
+    }
+    page.push({t:stamp,a:S.scores[0],b:S.scores[1],n0:PEOPLE[0],n1:PEOPLE[1],s0:k[0],s1:k[1]});
+    await kPut('H'+idx,page.map(fmtEntry).join(','));
+  }
+  /* a game only counts towards stats once both players are named and the
+     per-game figures are being recorded, which is everything from today on */
+  const counted=g=>!!(clean(g.n0)&&clean(g.n1)&&((g.s0&&g.s0.P)||(g.s1&&g.s1.P)));
+  const day=ts=>new Date(ts*1000).toLocaleDateString(undefined,{year:'2-digit',month:'short',day:'numeric'});
+
+  async function openSheet(title){
+    $('#histSheet').className='sheet on';
+    $('#histTitle').textContent=title;
+    const el=$('#histList'); el.textContent=t('loading');
+    if(!G) G={room:ROOM,level:1,clock:0,
+              startAt:0,gameNo:1,first:0,moves:[],_tmp:1};
+    me=Math.max(0,PEOPLE.indexOf(myPick));
+    const h=await loadHist();
+    return {el,h};
+  }
+  function closeTmp(){ if(G&&G._tmp) G=null; }
+
+  $('#bStats').onclick=async()=>{
+    $('#histClear').style.display='none';
+    const r=await openSheet(t('stats'));
+    const el=r.el, h=r.h.filter(counted);
+    if(!h.length){ el.textContent=t('statsnone'); closeTmp(); return; }
+    const myName=clean(PEOPLE[me]);
+    const mySide=g=>{
+      if(g.n0||g.n1){
+        if(myName&&clean(g.n0)===myName) return 0;
+        if(myName&&clean(g.n1)===myName) return 1;
+      }
+      return me;
+    };
+    // fold every stored game into one column per player
+    const col=[{w:0,pts:0,n:0,high:0,B:0,O:0,P:0,F:0,bw:null,lw:null},
+               {w:0,pts:0,n:0,high:0,B:0,O:0,P:0,F:0,bw:null,lw:null}];
+    let drew=0, streak=[0,0], bestStreak=[0,0], run=[0,0];
+    for(const g of h){
+      const k=mySide(g);
+      const sc=[k===0?g.a:g.b, k===0?g.b:g.a];
+      const st=[k===0?g.s0:g.s1, k===0?g.s1:g.s0];
+      for(const i of [0,1]){
+        const c=col[i], x=st[i]||Z;
+        c.pts+=sc[i]; c.n++; if(sc[i]>c.high) c.high=sc[i];
+        c.B+=x.B; c.O+=x.O; c.P+=x.P; c.F+=x.F;
+        if(x.W&&(!c.bw||x.S>c.bw.s)) c.bw={w:x.W,s:x.S,t:g.t};
+        if(x.L&&x.V&&(!c.lw||x.L>=c.lw.l)) c.lw={l:x.L,w:x.V,t:g.t};
+      }
+      if(sc[0]>sc[1]){ col[0].w++; run[0]++; run[1]=0; }
+      else if(sc[1]>sc[0]){ col[1].w++; run[1]++; run[0]=0; }
+      else { drew++; run=[0,0]; }
+      for(const i of [0,1]) if(run[i]>bestStreak[i]) bestStreak[i]=run[i];
+    }
+    streak=run;
+    const num=(v,suf)=>v||v===0?v+(suf||''):t('st_none');
+    const row=(label,v0,v1)=>'<div style="display:flex;justify-content:space-between;gap:8px;'
+      +'padding:6px 0;border-bottom:1px solid #ffffff0d;font-size:12.5px">'
+      +'<span style="color:#8B99BF">'+label+'</span>'
+      +'<span style="font-family:Georgia,serif;white-space:nowrap">'
+      +'<span style="display:inline-block;min-width:54px;text-align:right">'+v0+'</span>'
+      +'<span style="display:inline-block;min-width:54px;text-align:right">'+v1+'</span>'
+      +'</span></div>';
+    const avg=c=>c.n?Math.round(c.pts/c.n):0;
+    const rate=c=>c.P?Math.round(100*c.F/c.P)+'%':t('st_none');
+    const head='<div style="display:flex;justify-content:space-between;gap:8px;'
+      +'font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#5C6A90;'
+      +'padding-bottom:7px;border-bottom:1px solid #ffffff22">'
+      +'<span>'+h.length+' '+t('gamesplayed')+'</span>'
+      +'<span style="white-space:nowrap">'
+      +'<span style="display:inline-block;min-width:54px;text-align:right;color:var(--amber)">'+nm(me)+'</span>'
+      +'<span style="display:inline-block;min-width:54px;text-align:right">'+nm(1-me)+'</span>'
+      +'</span></div>'
+      + row(t('st_won'), col[0].w, col[1].w)
+      + row(t('st_streak'), streak[0]||t('st_none'), streak[1]||t('st_none'))
+      + row(t('st_best'), bestStreak[0], bestStreak[1])
+      + row(t('st_avg'), avg(col[0]), avg(col[1]))
+      + row(t('st_high'), col[0].high, col[1].high)
+      + row(t('st_bingo'), col[0].B, col[1].B)
+      + row(t('st_out'), col[0].O, col[1].O)
+      + row(t('st_rate'), rate(col[0]), rate(col[1]))
+      ;
+
+    const card=(title,pick)=>{
+      const got=[0,1].map(i=>pick(col[i]));
+      if(!got[0]&&!got[1]) return '';
+      const win = got[0]&&got[1] ? (got[0].k>=got[1].k?0:1) : (got[0]?0:1);
+      const b=got[win];
+      return '<div style="margin-top:14px;background:var(--panel2);border:1px solid var(--line);'
+        +'border-radius:10px;padding:10px 12px">'
+        +'<div style="font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#5C6A90;'
+        +'margin-bottom:4px">'+title+'</div>'
+        +'<div><span class="wchip" style="margin:0" data-w="'+b.w+'">'+b.w+'</span>'
+        +'<span style="font-size:12px;color:#8B99BF;margin-left:8px">'+b.sub
+        +' \u00b7 '+nm(win===0?me:1-me)+' \u00b7 '+day(b.t)+'</span></div></div>';
+    };
+    const bwPick=c=>c.bw?{k:c.bw.s,w:c.bw.w,sub:c.bw.s+t('pts'),t:c.bw.t}:null;
+    const lwPick=c=>c.lw?{k:c.lw.l,w:c.lw.w,sub:c.lw.l+' '+t('st_letters'),t:c.lw.t}:null;
+    const cards=card(t('st_bw'),bwPick)+card(t('st_lw'),lwPick);
+    el.innerHTML=head+cards;
+    el.querySelectorAll('.wchip[data-w]').forEach(c=>c.onclick=()=>{
+      $('#histSheet').className='sheet';
+      $('#wordSheet').className='sheet on';
+      $('#wordList').innerHTML=''; lookup(c.dataset.w);
+    });
+    closeTmp();
+  };
+
+  $('#bHist').onclick=async()=>{
+    $('#histClear').style.display='';
+    const {el,h}=await openSheet(t('histtitle'));
+    if(!h.length){ el.textContent=t('histnone'); closeTmp(); return; }
+    el.innerHTML=h.slice().reverse().map(g=>{
+      const l0=clean(g.n0)||t('seat1'), l1=clean(g.n1)||t('seat2');
+      const side=(n,sc,win)=>'<span style="'+(win?'color:#E7ECF7;font-weight:600':'color:#8B99BF')+'">'
+        +n+' '+sc+'</span>';
+      return '<div style="display:flex;justify-content:space-between;gap:10px;padding:7px 0;'
+        +'border-bottom:1px solid #ffffff10;font-size:13px">'
+        +'<span style="color:#5C6A90;white-space:nowrap">'+day(g.t)+'</span>'
+        +'<span style="text-align:right">'+side(l0,g.a,g.a>g.b)+'<span style="color:#5C6A90"> : </span>'
+        +side(l1,g.b,g.b>g.a)+'</span></div>';
+    }).join('');
+    closeTmp();
+  };
+
+  $('#histClear').onclick=async()=>{
+    if(!confirm(t('histclearask'))) return;
+    const idx=parseInt(await kGet('HIDX')||'0',10)||0;
+    for(let i=0;i<=idx;i++) await kPut('H'+i,'');
+    await kPut('HIDX','0'); await kPut('HISTORY','');
+    $('#histList').textContent=t('histnone');
+  };
+  $('#histClose').onclick=()=>$('#histSheet').className='sheet';
+
+  $('#bWords').onclick=()=>{
+    $('#wordSheet').className='sheet on';
+    const list=$('#wordList'); list.innerHTML=''; $('#def').textContent=t('tapword');
+    const seen=new Set();
+    for(const l of S.log){
+      if(l.type!=='P') continue;
+      for(const w of l.words){
+        if(seen.has(w)) continue; seen.add(w);
+        const b=document.createElement('span');
+        b.className='wchip'+(l.turn===me?'':' them');
+        b.innerHTML=w+'<small>'+nm(l.turn)+'</small>';
+        b.onclick=()=>lookup(w); list.appendChild(b);
+      }
+    }
+    if(!seen.size) list.textContent='No words yet.';
+    const rows=[];
+    for(const l of S.log){
+      if(l.type!=='P') continue;
+      const m=missed[l.mi];
+      if(m&&m.words&&m.words.length&&m.score>l.score) rows.push({m,turn:l.turn});
+    }
+    if(rows.length){
+      const h=document.createElement('div');
+      h.style.cssText='margin-top:16px;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#8B99BF';
+      h.textContent=t('missed'); list.appendChild(h);
+      const note=document.createElement('div');
+      note.style.cssText='font-size:11px;color:#5C6A90;margin:4px 0 8px';
+      note.textContent=t('missednote'); list.appendChild(note);
+      const wrap=document.createElement('div'); wrap.style.marginTop='2px';
+      const done=new Set();
+      for(const {m,turn} of rows){
+        const hide=!S.ended&&stillOpen(m,S,turn,dict);
+        for(const w of m.words){
+          const key=w+turn;
+          if(done.has(key))continue; done.add(key);
+          const b=document.createElement('span');
+          if(hide){
+            b.className='wchip locked';
+            b.innerHTML='<span class="bx">'+'\u25A1'.repeat(w.length)+'</span><small>'+m.score+'</small>';
+          }else{
+            b.className='wchip'+(turn===me?'':' them');
+            b.innerHTML=w+'<small>'+m.score+'</small>';
+            b.onclick=()=>lookup(w);
+          }
+          wrap.appendChild(b);
+        }
+      }
+      list.appendChild(wrap);
+    }
+  };
+  $('#wordClose').onclick=()=>$('#wordSheet').className='sheet';
+
+  async function lookup(w){
+    const d=$('#def'), key=w.toLowerCase();
+    if(defCache[key]){d.innerHTML=defCache[key];return;}
+    const head='<div style="font-family:Georgia,serif;font-size:17px;margin-bottom:6px">'+w+'</div>';
+    const loc=localDef(w);
+    let html=head;
+    if(loc){
+      const [pos,def,ex]=loc.e;
+      if(GEODEF[w.toLowerCase()]&&!DEFS[w.toLowerCase()]) html+='';
+      if(loc.ko) html+='<div class="ko">'+loc.ko.join(' · ')+'</div>';
+      html+='<div style="margin-bottom:8px"><span class="pos">'+pos+'</span><br>'+def
+        +(ex?'<br><span class="ex">\u201C'+ex+'\u201D</span>':'')
+        +(loc.lemma!==key?'<br><span class="ex" style="font-size:11px">from '+loc.lemma+'</span>':'')
+        +'</div>';
+      d.innerHTML=html;
+    } else {
+      const k=localKo(w);
+      if(k){ html+='<div class="ko">'+k.join(' · ')+'</div>'; d.innerHTML=html; }
+      else d.textContent=t('loading');
+    }
+    try{
+      const r=await fetch('https://api.dictionaryapi.dev/api/v2/entries/en/'+encodeURIComponent(key));
+      if(!r.ok) throw 0;
+      const j=await r.json();
+      let more='',n=0;
+      for(const entry of j) for(const m of (entry.meanings||[])){
+        for(const def of (m.definitions||[]).slice(0,1)){
+          if(n++>=2) break;
+          more+='<div style="margin-bottom:8px"><span class="pos">'+(m.partOfSpeech||'')+'</span><br>'
+            +def.definition+(def.example?'<br><span class="ex">\u201C'+def.example+'\u201D</span>':'')+'</div>';
+        }
+      }
+      if(more) html+='<div style="border-top:1px solid #2C3960;margin:10px 0 8px"></div>'+more;
+    }catch(e){ if(!loc) html+='<div class="ex">'+t('nodef')+'</div>'; }
+    defCache[key]=html; d.innerHTML=html;
+  }
+
+  /* ---- deep link ---- */
+  (function(){
+    const h=new URLSearchParams(location.hash.replace(/^#/,''));
+    if(h.get('db')) db=h.get('db');
+    if(h.get('cl')!==null){
+      clockSel=+h.get('cl');
+      const btns=[...document.querySelectorAll('#clockSeg button')];
+      btns.forEach(x=>x.classList.remove('on'));
+      const exact=btns.find(x=>+x.dataset.cl===clockSel);
+      if(exact) exact.classList.add('on');
+      else{ const c=btns.find(x=>x.dataset.cl==='-1');
+            c.textContent=Math.round(clockSel/60)+' min'; c.classList.add('on'); }
+    }
+    try{ myPick=localStorage.getItem('nsb_name')||''; }catch(e){}
+    document.querySelectorAll('#nameSeg button').forEach(b=>b.classList.toggle('on',b.dataset.nm===myPick));
+    me=Math.max(0,PEOPLE.indexOf(myPick));
+    readyCheck();
+    let cfg=null; try{ cfg=JSON.parse(localStorage.getItem('nsb_cfg')||'null'); }catch(e){}
+    if(cfg&&cfg.clock!==undefined){
+      // remember everything, but still show the screen: the seat is chosen here
+      clockSel=cfg.clock;
+      const btns=[...document.querySelectorAll('#clockSeg button')];
+      btns.forEach(x=>x.classList.remove('on'));
+      const exact=btns.find(x=>+x.dataset.cl===clockSel);
+      if(exact) exact.classList.add('on');
+      else if(clockSel>0){ const c=btns.find(x=>x.dataset.cl==='-1');
+        c.textContent=Math.round(clockSel/60)+' min'; c.classList.add('on'); }
+    }
+  })();
+
+  async function showLastGame(){
+    if(!db) return;
+    const room=ROOM;
+    const keep=G;
+    G={room,level:0,clock:0,startAt:0,gameNo:1,first:0,moves:[],_tmp:1};
+    const h=await loadHist();
+    G=keep;
+    if(!h.length) return;
+    const g=h[h.length-1];
+    const l0=clean(g.n0)||t('seat1'), l1=clean(g.n1)||t('seat2');
+    const win=g.a===g.b?null:(g.a>g.b?l0:l1);
+    const day=new Date(g.t*1000).toLocaleDateString(undefined,{month:'short',day:'numeric'});
+    $('#lastGame').innerHTML='<div class="lg">'+t('lastgame')+' \u00b7 '+day+'</div>'
+      +(win?'<b>'+win+'</b> '+t('won')+' ':'<b>'+t('draw')+'</b> ')
+      +'<span style="font-family:Georgia,serif">'+Math.max(g.a,g.b)+' : '+Math.min(g.a,g.b)+'</span>';
+    $('#lastGame').className='on';
+  }
+  showLastGame();
+
+  paintLang();
+})();
+</script>
+</body>
+</html>
