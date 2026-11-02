@@ -131,9 +131,20 @@ try {
 
 const SAVED_GAME = 'tlmno0:312:288:Junghyun:Hailey'
                  + ':1~0~88~QUICKLY~7~12~5~SATIETY:0~1~64~ZEBRA~5~13~7~ZEBRAS';
-const db = { HIDX: '0', H0: SAVED_GAME };
+
+/* The database the way Firebase's rules shape it: the old open location /g,
+   still holding last month's games, and the locked one under /s/<key>. Any
+   other /s path is refused, as the real rules refuse it. */
+const PASS = 'Moon river tea kettle';
+const KEY = require('crypto').createHash('sha256')
+  .update(PASS.trim().replace(/\s+/g, ' ').toLowerCase()).digest('hex');
+const old = { HIDX: '0', H0: SAVED_GAME, BED_OPEN: 'Hailey' };
+const oldBefore = JSON.stringify(old);
+const db = {};
 const storage = { nsb_cfg: JSON.stringify({ clock: 900 }), nsb_name: 'Junghyun' };
 const errors = [];
+
+const reply = (ok, v) => ({ ok, status: ok ? 200 : 401, json: async () => v });
 
 const dom = new JSDOM(html, {
   runScripts: 'dangerously',
@@ -147,10 +158,21 @@ const dom = new JSDOM(html, {
         removeItem: k => { delete storage[k]; },
       },
     });
+    if (!w.crypto || !w.crypto.subtle) {
+      Object.defineProperty(w, 'crypto', { value: require('crypto').webcrypto });
+    }
     w.fetch = async (url, opt) => {
-      const key = (/\/g\/([^.]+)\.json/.exec(url) || [])[1];
-      if (opt && opt.method === 'PUT') { db[key] = JSON.parse(opt.body); return { ok: true, json: async () => db[key] }; }
-      return { ok: true, json: async () => (key in db ? db[key] : null) };
+      const put = opt && opt.method === 'PUT';
+      const g = /\/g\/([^./]+)\.json/.exec(url);
+      if (g) {
+        if (put) { old[g[1]] = JSON.parse(opt.body); return reply(true, old[g[1]]); }
+        return reply(true, g[1] in old ? old[g[1]] : null);
+      }
+      const m = /\/s\/([0-9a-f]+)(?:\/([^./]+))?\.json/.exec(url);
+      if (!m || m[1] !== KEY) return reply(false, { error: 'Permission denied' });
+      if (!m[2]) return reply(true, Object.keys(db).length ? true : null);
+      if (put) { db[m[2]] = JSON.parse(opt.body); return reply(true, db[m[2]]); }
+      return reply(true, m[2] in db ? db[m[2]] : null);
     };
     w.navigator.vibrate = () => {};
     w.alert = () => {};
@@ -161,10 +183,27 @@ const dom = new JSDOM(html, {
 });
 
 const shown = id => !dom.window.document.querySelector(id).classList.contains('hidden');
+const wait = ms => new Promise(r => setTimeout(r, ms));
 
-setTimeout(() => {
+(async () => {
   const d = dom.window.document;
+  const unlock = async pass => { d.querySelector('#passIn').value = pass; d.querySelector('#passGo').click(); await wait(300); };
+
+  await wait(1200);
   check('loads without throwing', errors.length === 0, errors.join(' | '));
+  check('a new phone asks for the passphrase first', shown('#lock') && !shown('#setup'));
+
+  await unlock('moon river tea');
+  check('a wrong passphrase stays locked', shown('#lock') && !('nsb_key' in storage));
+  check('and says so', /did not work/.test(d.querySelector('#passErr').textContent));
+
+  await unlock('  MOON river  tea kettle ');
+  check('the right one opens, whatever the capitals and spaces', shown('#setup') && !shown('#lock'));
+  check('the phone remembers it', storage.nsb_key === KEY);
+  check('the passphrase itself is not stored', !Object.values(storage).some(v => /moon/i.test(v)));
+  check('old games were copied across', db.H0 === SAVED_GAME && db.HIDX === '0' && db.BED_OPEN === 'Hailey');
+
+  await wait(300);
   check('last game is on the first screen',
         /Junghyun won 312 : 288/.test(d.querySelector('#lastGame').textContent));
   check('the saved name is already chosen',
@@ -173,24 +212,23 @@ setTimeout(() => {
         !d.querySelector('#btnNew').disabled && !d.querySelector('#btnJoin').disabled);
 
   d.querySelector('#btnNew').click();
+  await wait(600);
+  check('tapping a start button opens the lobby', shown('#lobby') && !shown('#setup'));
+  check('the opener is shared with the other phone', db.BED_OPEN === 'Junghyun', String(db.BED_OPEN));
 
-  setTimeout(() => {
-    check('tapping a start button opens the lobby', shown('#lobby') && !shown('#setup'));
-    check('the opener is shared with the other phone', db.BED_OPEN === 'Junghyun', String(db.BED_OPEN));
+  /* The other phone turns up: its heartbeat is all the lobby waits for. */
+  db.BED_p1 = 'other~' + Math.round(Date.now() / 1000).toString(36);
 
-    /* The other phone turns up: its heartbeat is all the lobby waits for. */
-    db.BED_p1 = 'other~' + Math.round(Date.now() / 1000).toString(36);
+  await wait(3000);
+  check('both present starts the game', shown('#game') && !shown('#lobby'));
+  check('board is laid out', d.querySelectorAll('#board .c').length === 225);
+  check('a rack was dealt', d.querySelectorAll('#rack .rt').length === 7);
+  check('the opening turn is mine', /Your turn|You start/.test(d.querySelector('#preview').textContent));
+  check('the game was published for the other phone', typeof db.BED === 'string' && db.BED.startsWith('S5.BED.'));
+  check('nothing was written to the old open location', JSON.stringify(old) === oldBefore);
+  check('still nothing thrown', errors.length === 0, errors.join(' | '));
 
-    setTimeout(() => {
-      check('both present starts the game', shown('#game') && !shown('#lobby'));
-      check('board is laid out', d.querySelectorAll('#board .c').length === 225);
-      check('a rack was dealt', d.querySelectorAll('#rack .rt').length === 7);
-      check('the opening turn is mine', /Your turn|You start/.test(d.querySelector('#preview').textContent));
-      check('the game was published for the other phone', typeof db.BED === 'string' && db.BED.startsWith('S5.BED.'));
-
-      dom.window.close();
-      console.log(failed ? `\n${failed} failed\n` : '\nall good\n');
-      process.exit(failed ? 1 : 0);
-    }, 3000);
-  }, 600);
-}, 1200);
+  dom.window.close();
+  console.log(failed ? `\n${failed} failed\n` : '\nall good\n');
+  process.exit(failed ? 1 : 0);
+})();

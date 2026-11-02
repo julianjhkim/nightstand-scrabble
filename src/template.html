@@ -18,13 +18,13 @@
   body{max-width:520px;margin:0 auto;padding:10px 10px 18px;overscroll-behavior:none}
   .eyebrow{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--dim)}
 
-  #setup{padding:24px 4px}
-  #setup h1{font-family:Georgia,serif;font-weight:400;font-size:30px;line-height:1.15;margin:10px 0 4px}
-  #setup h1 em{font-style:italic;color:var(--amber)}
-  #setup p.lede{color:var(--dim);font-size:13px;line-height:1.6;margin:0 0 22px}
+  #setup,#lock{padding:24px 4px}
+  #setup h1,#lock h1{font-family:Georgia,serif;font-weight:400;font-size:30px;line-height:1.15;margin:10px 0 4px}
+  #setup h1 em,#lock h1 em{font-style:italic;color:var(--amber)}
+  #setup p.lede,#lock p.lede{color:var(--dim);font-size:13px;line-height:1.6;margin:0 0 22px}
   .field{margin:0 0 14px}
   .field label{display:block;font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--dim);margin-bottom:6px}
-  input[type=text]{width:100%;background:var(--panel);border:1px solid var(--line);color:#E7ECF7;
+  input[type=text],input[type=password]{width:100%;background:var(--panel);border:1px solid var(--line);color:#E7ECF7;
     border-radius:10px;padding:12px;font-size:16px;font-family:Georgia,serif;letter-spacing:.14em}
   .seg{display:flex;gap:6px}
   .seg button{flex:1;background:var(--panel);border:1px solid var(--line);color:var(--dim);
@@ -202,9 +202,23 @@
     font-size:22px;pointer-events:none;box-shadow:0 4px 12px #0008}
   #rackwrap.drop{outline:2px dashed var(--amber);outline-offset:2px}
   .hidden{display:none!important}
+  #passErr{color:var(--rose);font-size:13px;line-height:1.5;min-height:20px;margin:0 0 6px}
 </style>
 </head>
 <body>
+
+<div id="lock" class="hidden">
+  <div class="eyebrow" data-t="eyebrow"></div>
+  <h1>Nightstand <em>Scrabble</em></h1>
+  <p class="lede" data-t="locklede"></p>
+  <div class="field">
+    <label data-t="l_pass"></label>
+    <input type="password" id="passIn" autocomplete="current-password"
+           autocapitalize="off" autocorrect="off" spellcheck="false">
+  </div>
+  <div id="passErr"></div>
+  <button class="big" id="passGo" data-t="unlock"></button>
+</div>
 
 <div id="setup">
   <div class="eyebrow" data-t="eyebrow"></div>
@@ -697,6 +711,10 @@ if(typeof module!=='undefined') module.exports={evaluate,replay,makeBag,encodeGa
 const T={
  en:{eyebrow:'One round before bed',
   l_name:'I am',l_clock:'Time limit',
+  locklede:'This game is just for the two of us. Type the passphrase once and this phone will remember it.',
+  l_pass:'Passphrase',unlock:'Unlock',checking:'Checking\u2026',
+  badpass:'That passphrase did not work. Check it and try again.',
+  nonet:'Could not reach the game server. Check your connection and try again.',
   cl:['7 min','15 min','Custom','None'],
   askmin:'How many minutes each?',
   h_geo:'Adds countries, nationalities, capitals, US cities over 100k and US states. Two-word names run together: MEXICOCITY, NEWYORK.',
@@ -764,6 +782,12 @@ if(typeof document!=='undefined') (function(){
   let pend=[], sel=-1, rackOrder=null, exMode=false, exPick=new Set();
   const DEFAULT_DB='scrabble-69133-default-rtdb.firebaseio.com';
   let live=false, poll=null, db=DEFAULT_DB, pulling=false, lastSeen='', tickT=null;
+  /* Everything lives under /s/<key>, where the key is a hash of a passphrase
+     only the two phones know. The database refuses every other path and will
+     not list what it holds, so without the passphrase there is nothing to find. */
+  let KEY=''; try{ KEY=localStorage.getItem('nsb_key')||''; }catch(e){}
+  const host=()=>'https://'+db.replace(/^https?:\/\//,'').replace(/\/$/,'');
+  const at=k=>host()+'/s/'+KEY+'/'+k+'.json';
   let flash=null, seenF=0, sig='', lobbyT=null, lastPartner=0, beatN=0, myBeat=0;
   let noMove=false, noMoveSig=null, leftover=null, history=null, feedJump=false;
   /* who to call each side: real names once they are set, otherwise you/them */
@@ -773,7 +797,7 @@ if(typeof document!=='undefined') (function(){
   let clockSel=900;
 
   const PEOPLE=['Junghyun','Hailey'];
-  const NOTES=[["2026.11.01", [["Games start right away again", "Opening a game threw an error behind the scenes: the page tried to draw a board for a game whose state had not been worked out yet. Nothing showed, but the lobby only noticed the new game on its next check, so starting took about two seconds longer than it should have."]]], ["2026.10.10", [["A name could still be wiped, and this time it was my fix that did it", "Thursday's change gave each seat its own slot so neither phone could overwrite the other. It also added a line that released your old slot when you changed seats, and that line wrote to the other seat. If you had opened Stats or History before starting, your phone was holding an out-of-date picture of who sat where, and saving your name blanked your partner's. It only showed up on games where you swapped who opens, which is why the first game was fine and the second was not."], ["Names are stored per person now", "Each of you owns one entry saying which seat you took and when. Nobody writes to anybody else's, so no order of taps can erase a name. Sixteen combinations of ordering and seating were checked and none loses one."], ["The half-named game is repaired", "There are only two of you, so a record with one name filled in says who the other was. Games stored that way are now read back complete and count towards stats again."], ["Your name is now your seat", "Junghyun is always player 1 and Hailey always player 2. Keeping the person and the slot as two separate things is what every name bug grew out of: the app had to agree on who sat where, and the two phones could disagree. There is nothing left to agree on, so the seat-clash warning, the name sync and the slot-release logic are all gone."], ["The buttons only choose who opens", "They used to pick your seat and the opening move at the same time. Now they set one thing, stored as a single shared value that the later tap wins, and the lobby shows the result so you can see it before the game starts."], ["Smaller first screen", "The room is one line with a Change link instead of a text box, and the start buttons stay disabled until you have tapped your name, which was the one step that quietly broke everything downstream when skipped."], ["No more room code", "It was a fixed value you never typed, so it is now built in. The first screen is down to who you are, the clock, and which of you opens."], ["Running out of tiles no longer ends the game", "Clear your rack and play passes to whoever still has tiles, who keeps going on their own until they are out too. The game ends when neither of you holds a tile, when neither of you can play, or on the clock. The 20 points go to each of you who empties a rack, so both can earn it in the same game."], ["Longest word was showing the wrong word", "The card paired the longest length with your highest-scoring word, which are usually not the same play. The longest word is now kept as itself, and a tie goes to the most recent one. Words played is gone from stats: in a turn-based game the two of you are always within a move of each other."]]], ["2026.10.06", [["One of the two names kept vanishing", "Both phones were reading the pair of names, editing their half and writing the pair back. Start within a second of each other and the later write replaced the earlier one, so whoever moved second was the only name left and the other showed up as Player 1. Each seat now has its own slot, so neither of you can overwrite the other."], ["Sheets scroll properly", "The title and the buttons stay put while the list moves, so Close is always where you left it instead of at the end of a long history."]]], ["2026.10.05", [["A wider dictionary", "The cut-off moved from the 50,000 to the 65,000 most-used words, adding about 5,000 entries. SATIETY was one of the casualties: it sat at 53,838 while SATE, at 48,468, was in, which is why one worked and the other did not. SATIATE, DIADEM and ERUDITION come in with it."], ["Stats, and a separate History", "Three buttons on the first screen now: Stats, History and these notes. Stats compares the two of you on games won, current and best streak, average and best game score, bingos, racks cleared, words played, and how often each of you found the highest-scoring move available, with cards for your best and longest words. It counts games from today onwards only, since older results recorded neither names nor any of these figures. History is the plain list of every game ever played."], ["Last game on the opening screen", "Who won the previous game now sits at the top of the first screen, so you do not have to open anything to see it."], ["Games end when neither of you can move", "With an empty bag and no playable word on either rack, the game now ends on the spot. The rule of six consecutive passes was still being applied, which meant tapping Skip three times each to finish a game that was already over."], ["Names are a choice, not a text box", "Pick Junghyun or Hailey on the first screen. Typing them meant a stray space or capital could stop the two from matching, and whoever had not typed theirs showed up as Player 1. Stats and history are filed by name, so both of you need to pick before a game for the record to come out right."], ["Geography is always on", "The setting is gone. It was never going to be switched off."]]], ["2026.09.22", [["Missed moves open as soon as that exact move is gone", "A hidden hint now stays hidden only while the very same move can still be played: the same squares, the same tiles in hand, the same score. Spend a letter it needed or let one of its squares get taken, and it opens at once. Playing HIM with the H that an AH needed now reveals the AH straight away, instead of a turn later. Once a hint is open, either of you is free to grab the idea."], ["Hints no longer lag behind", "The search for missed moves used to start one at a time, only when the board changed, so a second one could sit waiting a whole turn. They now run back to back."], ["Clearing your rack is worth 20", "Play your last tile once the bag is empty and you take 20 points with you. It counts during the final minute too. A game that ends on the clock has no bonus, since nobody ran out of tiles."], ["The button decides who opens", "Tap the first button and you open the game; tap the second and your partner does. The old rule where the previous game's loser opened has been dropped, because it quietly overruled the buttons from the second game onward."], ["History could flip on you", "Results were filed by seat and read back from whichever seat you happened to be in, so taking the other button once rewrote every past game: a loss became a win. Names are now stored with each result, so nothing moves. Older rows show as Player 1 and Player 2, since there is no way to tell who was who; there is a button to clear them."]]], ["2026.09.17", [["Proper nouns cleaned up", "JUNE and IRAN were never playable, which is correct: Scrabble does not allow proper nouns. ZAIRE slipped in because usage counts ignore capitals, so the country's frequency propped up the lowercase currency word. 83 of these were removed. Better still, 95 words turned out to have an ordinary meaning the dictionary was ignoring: ATLAS is a book of maps again, ARK is Noah's, CANTON is an administrative district, CHIHUAHUA is the dog."], ["Geography, as a setting", "Countries, nationalities, capitals, every US city over 100,000 people and all 50 states. Two-word names run together, so MEXICOCITY and NEWYORK count. Turn it off for a plain game."], ["One word list instead of three", "Everyday and Wider are gone. There is a single 42,000-word list, the old Normal, so there is nothing to agree on before a game."], ["65 food words", "kimchi, queso, ramen, bulgogi, bibimbap, gnocchi, quinoa, boba and friends. Always on, whatever Geography says. Korean dishes show their Korean name in the word log."], ["Time limits: 7, 15, or your own number", "Custom takes any number of minutes up to 180, and it travels with the invite link so both phones match."], ["Reorder your rack by dragging", "Drag a tile to a different spot in the rack and it slots in there. Shuffle is no longer the only way to move things around."], ["Leftover tiles get explained", "When a game ends, both players see what they were still holding and the best word those tiles could have made."], ["Game history", "Every finished game with the date and score, plus your running record at the top. It keeps everything, not a recent handful."], ["Missed-move hints stopped spoiling themselves", "A hidden word used to be revealed as soon as its original square was taken. But after playing PAW down through WAXED you can often still build TAKE somewhere else. Now the whole board is rechecked, and the word stays hidden while it can be played anywhere at all."], ["A room you keep", "The room code no longer doubles as the game. It stays the same forever and each night opens a fresh game inside it, so nobody types a code again."], ["The loser opens the next game", "Seats stay with whoever chose them, so the last game's loser is the one who starts the next. A tie passes the opening move to whoever went second."], ["Names", "Put your name on the first screen and it replaces Player 1 on the scoreboard, in the move log and in history."], ["The move log keeps the whole game", "It used to show the last fourteen lines. Now it holds every move, can be expanded to half the screen, and stops yanking you back to the bottom while you are reading."], ["These release notes", "A dot appears next to the button when something has changed since you last looked."]]], ["Old", [["Only words people actually use", "A word gets in if it is spelled validly, turns up in real usage, and has a meaning we can show you. That removes QI, ZA, XU, QAT and the rest of the Scrabble-dictionary curiosities without touching normal vocabulary. British spellings included."], ["Words are judged whole, not form by form", "The commonest form of a word decides the whole family. Before this, HURLED and HURLING were playable while HURL was not, because the past tense happens to be more common. WINCE, DOZE and GULP were missing for the same reason."], ["Both phones share one clock", "Each move records when it happened, so the two phones calculate the same remaining time instead of each counting from when it opened."], ["The clock runs like a chess clock", "It only ticks on your turn. When it hits zero your partner gets a final minute to play as many moves as they can, but only if they are behind. If they are already ahead the game simply ends."], ["Scoring is just the words you made", "No leftover-tile penalties, no bonus for going out first. Using all seven tiles in one move still scores 50 extra."], ["Play while you wait", "Tiles can be placed during your partner's turn. A valid word outlines itself in green and shows what it would score."], ["Drag tiles onto the board", "Drag from the rack, from square to square, or back to the rack. Tapping still works the same way."], ["Definitions and examples built in", "Every playable word has a meaning stored in the page, so it opens instantly and works offline, with Korean meanings where available. Examples that did not contain their own word were removed: KEN used to be illustrated by a sentence about sight."], ["The best move you missed", "After each move the board is searched for the highest-scoring play that was available. If it beat what you played, the word appears as boxes and unlocks once the chance is gone."], ["A warning when nothing can be played", "If no word can be made from your tiles anywhere on the board, you are told, and the swap button starts pulsing."], ["A waiting room", "You both start at the same moment, and the clock starts then too."], ["Pause", "Stops both clocks. Either of you can resume."]]]];
+  const NOTES=[["2026.11.02", [["The game is now locked with a passphrase", "Until now anyone who looked at the page's code could read our games, and could change or erase them, history included. Nobody did, but nothing stopped them. Now everything is kept behind a passphrase only our two phones know. Each phone asks for it once and remembers it, and your old games and history come along the first time you unlock."]]], ["2026.11.01", [["Games start right away again", "Opening a game threw an error behind the scenes: the page tried to draw a board for a game whose state had not been worked out yet. Nothing showed, but the lobby only noticed the new game on its next check, so starting took about two seconds longer than it should have."]]], ["2026.10.10", [["A name could still be wiped, and this time it was my fix that did it", "Thursday's change gave each seat its own slot so neither phone could overwrite the other. It also added a line that released your old slot when you changed seats, and that line wrote to the other seat. If you had opened Stats or History before starting, your phone was holding an out-of-date picture of who sat where, and saving your name blanked your partner's. It only showed up on games where you swapped who opens, which is why the first game was fine and the second was not."], ["Names are stored per person now", "Each of you owns one entry saying which seat you took and when. Nobody writes to anybody else's, so no order of taps can erase a name. Sixteen combinations of ordering and seating were checked and none loses one."], ["The half-named game is repaired", "There are only two of you, so a record with one name filled in says who the other was. Games stored that way are now read back complete and count towards stats again."], ["Your name is now your seat", "Junghyun is always player 1 and Hailey always player 2. Keeping the person and the slot as two separate things is what every name bug grew out of: the app had to agree on who sat where, and the two phones could disagree. There is nothing left to agree on, so the seat-clash warning, the name sync and the slot-release logic are all gone."], ["The buttons only choose who opens", "They used to pick your seat and the opening move at the same time. Now they set one thing, stored as a single shared value that the later tap wins, and the lobby shows the result so you can see it before the game starts."], ["Smaller first screen", "The room is one line with a Change link instead of a text box, and the start buttons stay disabled until you have tapped your name, which was the one step that quietly broke everything downstream when skipped."], ["No more room code", "It was a fixed value you never typed, so it is now built in. The first screen is down to who you are, the clock, and which of you opens."], ["Running out of tiles no longer ends the game", "Clear your rack and play passes to whoever still has tiles, who keeps going on their own until they are out too. The game ends when neither of you holds a tile, when neither of you can play, or on the clock. The 20 points go to each of you who empties a rack, so both can earn it in the same game."], ["Longest word was showing the wrong word", "The card paired the longest length with your highest-scoring word, which are usually not the same play. The longest word is now kept as itself, and a tie goes to the most recent one. Words played is gone from stats: in a turn-based game the two of you are always within a move of each other."]]], ["2026.10.06", [["One of the two names kept vanishing", "Both phones were reading the pair of names, editing their half and writing the pair back. Start within a second of each other and the later write replaced the earlier one, so whoever moved second was the only name left and the other showed up as Player 1. Each seat now has its own slot, so neither of you can overwrite the other."], ["Sheets scroll properly", "The title and the buttons stay put while the list moves, so Close is always where you left it instead of at the end of a long history."]]], ["2026.10.05", [["A wider dictionary", "The cut-off moved from the 50,000 to the 65,000 most-used words, adding about 5,000 entries. SATIETY was one of the casualties: it sat at 53,838 while SATE, at 48,468, was in, which is why one worked and the other did not. SATIATE, DIADEM and ERUDITION come in with it."], ["Stats, and a separate History", "Three buttons on the first screen now: Stats, History and these notes. Stats compares the two of you on games won, current and best streak, average and best game score, bingos, racks cleared, words played, and how often each of you found the highest-scoring move available, with cards for your best and longest words. It counts games from today onwards only, since older results recorded neither names nor any of these figures. History is the plain list of every game ever played."], ["Last game on the opening screen", "Who won the previous game now sits at the top of the first screen, so you do not have to open anything to see it."], ["Games end when neither of you can move", "With an empty bag and no playable word on either rack, the game now ends on the spot. The rule of six consecutive passes was still being applied, which meant tapping Skip three times each to finish a game that was already over."], ["Names are a choice, not a text box", "Pick Junghyun or Hailey on the first screen. Typing them meant a stray space or capital could stop the two from matching, and whoever had not typed theirs showed up as Player 1. Stats and history are filed by name, so both of you need to pick before a game for the record to come out right."], ["Geography is always on", "The setting is gone. It was never going to be switched off."]]], ["2026.09.22", [["Missed moves open as soon as that exact move is gone", "A hidden hint now stays hidden only while the very same move can still be played: the same squares, the same tiles in hand, the same score. Spend a letter it needed or let one of its squares get taken, and it opens at once. Playing HIM with the H that an AH needed now reveals the AH straight away, instead of a turn later. Once a hint is open, either of you is free to grab the idea."], ["Hints no longer lag behind", "The search for missed moves used to start one at a time, only when the board changed, so a second one could sit waiting a whole turn. They now run back to back."], ["Clearing your rack is worth 20", "Play your last tile once the bag is empty and you take 20 points with you. It counts during the final minute too. A game that ends on the clock has no bonus, since nobody ran out of tiles."], ["The button decides who opens", "Tap the first button and you open the game; tap the second and your partner does. The old rule where the previous game's loser opened has been dropped, because it quietly overruled the buttons from the second game onward."], ["History could flip on you", "Results were filed by seat and read back from whichever seat you happened to be in, so taking the other button once rewrote every past game: a loss became a win. Names are now stored with each result, so nothing moves. Older rows show as Player 1 and Player 2, since there is no way to tell who was who; there is a button to clear them."]]], ["2026.09.17", [["Proper nouns cleaned up", "JUNE and IRAN were never playable, which is correct: Scrabble does not allow proper nouns. ZAIRE slipped in because usage counts ignore capitals, so the country's frequency propped up the lowercase currency word. 83 of these were removed. Better still, 95 words turned out to have an ordinary meaning the dictionary was ignoring: ATLAS is a book of maps again, ARK is Noah's, CANTON is an administrative district, CHIHUAHUA is the dog."], ["Geography, as a setting", "Countries, nationalities, capitals, every US city over 100,000 people and all 50 states. Two-word names run together, so MEXICOCITY and NEWYORK count. Turn it off for a plain game."], ["One word list instead of three", "Everyday and Wider are gone. There is a single 42,000-word list, the old Normal, so there is nothing to agree on before a game."], ["65 food words", "kimchi, queso, ramen, bulgogi, bibimbap, gnocchi, quinoa, boba and friends. Always on, whatever Geography says. Korean dishes show their Korean name in the word log."], ["Time limits: 7, 15, or your own number", "Custom takes any number of minutes up to 180, and it travels with the invite link so both phones match."], ["Reorder your rack by dragging", "Drag a tile to a different spot in the rack and it slots in there. Shuffle is no longer the only way to move things around."], ["Leftover tiles get explained", "When a game ends, both players see what they were still holding and the best word those tiles could have made."], ["Game history", "Every finished game with the date and score, plus your running record at the top. It keeps everything, not a recent handful."], ["Missed-move hints stopped spoiling themselves", "A hidden word used to be revealed as soon as its original square was taken. But after playing PAW down through WAXED you can often still build TAKE somewhere else. Now the whole board is rechecked, and the word stays hidden while it can be played anywhere at all."], ["A room you keep", "The room code no longer doubles as the game. It stays the same forever and each night opens a fresh game inside it, so nobody types a code again."], ["The loser opens the next game", "Seats stay with whoever chose them, so the last game's loser is the one who starts the next. A tie passes the opening move to whoever went second."], ["Names", "Put your name on the first screen and it replaces Player 1 on the scoreboard, in the move log and in history."], ["The move log keeps the whole game", "It used to show the last fourteen lines. Now it holds every move, can be expanded to half the screen, and stops yanking you back to the bottom while you are reading."], ["These release notes", "A dot appears next to the button when something has changed since you last looked."]]], ["Old", [["Only words people actually use", "A word gets in if it is spelled validly, turns up in real usage, and has a meaning we can show you. That removes QI, ZA, XU, QAT and the rest of the Scrabble-dictionary curiosities without touching normal vocabulary. British spellings included."], ["Words are judged whole, not form by form", "The commonest form of a word decides the whole family. Before this, HURLED and HURLING were playable while HURL was not, because the past tense happens to be more common. WINCE, DOZE and GULP were missing for the same reason."], ["Both phones share one clock", "Each move records when it happened, so the two phones calculate the same remaining time instead of each counting from when it opened."], ["The clock runs like a chess clock", "It only ticks on your turn. When it hits zero your partner gets a final minute to play as many moves as they can, but only if they are behind. If they are already ahead the game simply ends."], ["Scoring is just the words you made", "No leftover-tile penalties, no bonus for going out first. Using all seven tiles in one move still scores 50 extra."], ["Play while you wait", "Tiles can be placed during your partner's turn. A valid word outlines itself in green and shows what it would score."], ["Drag tiles onto the board", "Drag from the rack, from square to square, or back to the rack. Tapping still works the same way."], ["Definitions and examples built in", "Every playable word has a meaning stored in the page, so it opens instantly and works offline, with Korean meanings where available. Examples that did not contain their own word were removed: KEN used to be illustrated by a sentence about sight."], ["The best move you missed", "After each move the board is searched for the highest-scoring play that was available. If it beat what you played, the word appears as boxes and unlocks once the chance is gone."], ["A warning when nothing can be played", "If no word can be made from your tiles anywhere on the board, you are told, and the swap button starts pulsing."], ["A waiting room", "You both start at the same moment, and the clock starts then too."], ["Pause", "Stops both clocks. Either of you can resume."]]]];
   const nowSec=()=>Date.now()/1000;
   async function sGet(k,sh){try{const r=await window.storage.get(k,sh);return r?r.value:null;}catch(e){return null;}}
   async function sSet(k,v,sh){try{await window.storage.set(k,v,sh);return true;}catch(e){return false;}}
@@ -815,10 +839,7 @@ if(typeof document!=='undefined') (function(){
 
   /* ---- presence: one flat key per seat, so the two phones never
          overwrite each other's heartbeat ---- */
-  function pURL(seat){
-    return 'https://'+db.replace(/^https?:\/\//,'').replace(/\/$/,'')
-      +'/g/'+G.room+'_p'+seat+'.json';
-  }
+  function pURL(seat){ return at(G.room+'_p'+seat); }
   const SID=Math.random().toString(36).slice(2,7);
   const DID=(function(){
     let v=''; try{ v=localStorage.getItem('nsb_did')||''; }catch(e){}
@@ -1387,7 +1408,7 @@ if(typeof document!=='undefined') (function(){
   }
 
   /* ---- sync ---- */
-  function remoteURL(){return 'https://'+db.replace(/^https?:\/\//,'').replace(/\/$/,'')+'/g/'+G.room+'.json';}
+  function remoteURL(){return at(G.room);}
   async function remotePut(code){
     if(!db) return await sSet('nsb:'+G.room,code,true);
     try{const r=await fetch(remoteURL(),{method:'PUT',body:JSON.stringify(code)});return r.ok;}
@@ -1465,7 +1486,7 @@ if(typeof document!=='undefined') (function(){
   /* History is paged: one key per 200 games, so the 4000-character limit
      on a single value stops being a ceiling on how much we can keep. */
   const PAGE=40;
-  const kURL=k=>'https://'+db.replace(/^https?:\/\//,'').replace(/\/$/,'')+'/g/'+k+'.json';
+  const kURL=at;
   async function kGet(k){
     if(!db) return null;
     try{ const r=await fetch(kURL(k),{cache:'no-store'});
@@ -1762,7 +1783,6 @@ if(typeof document!=='undefined') (function(){
   /* ---- deep link ---- */
   (function(){
     const h=new URLSearchParams(location.hash.replace(/^#/,''));
-    if(h.get('db')) db=h.get('db');
     if(h.get('cl')!==null){
       clockSel=+h.get('cl');
       const btns=[...document.querySelectorAll('#clockSeg button')];
@@ -1806,7 +1826,72 @@ if(typeof document!=='undefined') (function(){
       +'<span style="font-family:Georgia,serif">'+Math.max(g.a,g.b)+' : '+Math.min(g.a,g.b)+'</span>';
     $('#lastGame').className='on';
   }
-  showLastGame();
+
+  /* ---- passphrase ---- */
+  /* Lower-cased and with spaces tidied, so a phone keyboard's capital letter
+     or double space doesn't lock anyone out. scripts/firebase-rules.js hashes
+     the same way; the two must stay in step. */
+  async function keyFor(pass){
+    const norm=pass.trim().replace(/\s+/g,' ').toLowerCase();
+    const h=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(norm));
+    return [...new Uint8Array(h)].map(b=>b.toString(16).padStart(2,'0')).join('');
+  }
+  async function access(){
+    try{ const r=await fetch(host()+'/s/'+KEY+'.json?shallow=true',{cache:'no-store'});
+      return r.ok?'ok':(r.status===401||r.status===403?'denied':'offline'); }
+    catch(e){ return 'offline'; }
+  }
+  function showLock(on){
+    $('#lock').classList.toggle('hidden',!on);
+    $('#setup').classList.toggle('hidden',on);
+  }
+  /* One-time move from the old open location (/g) into the locked one. It only
+     fills empty slots, so it never overwrites anything already played under the
+     passphrase, and once /g is closed every read fails and it does nothing. */
+  async function moveOldGames(){
+    const old=async k=>{
+      try{ const r=await fetch(host()+'/g/'+k+'.json',{cache:'no-store'});
+        if(!r.ok) return null; const v=await r.json();
+        return typeof v==='string'?v:null; }catch(e){ return null; }
+    };
+    const idx=parseInt(await old('HIDX')||'0',10)||0;
+    const keys=[ROOM,ROOM+'_OPEN','HIDX','HISTORY'];
+    for(let i=0;i<=idx;i++) keys.push('H'+i);
+    for(const k of keys){
+      const v=await old(k);
+      if(v!==null&&await kGet(k)===null) await kPut(k,v);
+    }
+  }
+  $('#passGo').onclick=async()=>{
+    const pass=$('#passIn').value;
+    if(!pass.trim()) return;
+    $('#passGo').disabled=true; $('#passErr').textContent=t('checking');
+    const before=KEY;
+    KEY=await keyFor(pass);
+    const a=await access();
+    if(a!=='ok'){
+      KEY=before; $('#passGo').disabled=false;
+      $('#passErr').textContent=t(a==='denied'?'badpass':'nonet');
+      return;
+    }
+    try{ localStorage.setItem('nsb_key',KEY); }catch(e){}
+    $('#passIn').value=''; $('#passErr').textContent='';
+    await moveOldGames();
+    $('#passGo').disabled=false;
+    showLock(false); showLastGame();
+  };
+  $('#passIn').onkeydown=e=>{ if(e.key==='Enter') $('#passGo').click(); };
+
+  (async function(){
+    if(!db) return;
+    if(!KEY){ showLock(true); return; }
+    showLastGame();
+    /* a changed passphrase locks the phone again rather than failing quietly */
+    if(await access()==='denied'){
+      KEY=''; try{ localStorage.removeItem('nsb_key'); }catch(e){}
+      showLock(true);
+    }
+  })();
 
   paintLang();
 })();

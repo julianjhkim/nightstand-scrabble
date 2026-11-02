@@ -44,6 +44,11 @@ phones stay in sync, and the house rules.
   at the top. Hailey reads these, so write plain English saying what changed and
   why it was wrong before. No jargon, no em dashes.
 - All UI text is English (`LANG='en'`). No em dashes in UI text either.
+- Game data lives in Firebase under `/s/<hash of the passphrase>`; the rules
+  refuse every other path (see README, "How two phones stay in sync"). Never ask
+  for the passphrase, and never put it or its hash in the repo, the page, a
+  commit or chat. The user runs `npm run rules` themselves. `keyFor()` in
+  `src/template.html` and `scripts/firebase-rules.js` must hash the same way.
 - The dictionary was built from WordNet, Wordset, kengdic and wordfreq, but
   those build scripts are gone. `data/dictionary.json` is the only copy.
   Widening the word list means rebuilding that pipeline from scratch, so tell

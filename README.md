@@ -29,6 +29,9 @@ npm test                # rules engine, then the whole page in a headless browse
 | `build.py` | Drops the dictionary into the template's placeholder. |
 | `test/run.js` | Plays a full game against itself, then loads the page and starts one. |
 | `dist/index.html` | The built page. This is what gets deployed. |
+| `scripts/firebase-rules.js` | Prints the database rules for a passphrase (`npm run rules`). |
+| `scripts/deploys-left.js` | Counts Netlify deploys left this credit period (`npm run deploys`). |
+| `netlify.toml` | Tells Netlify to publish `dist/`. |
 
 The dictionary lives in the page rather than behind an API so that definitions
 open instantly and work with no signal. It costs 3.4 MB, which compresses to
@@ -48,10 +51,20 @@ second it was played. Tiles are shuffled from a seed of `room + game number`,
 so both phones deal the same rack without ever sending one. Clocks are computed
 from those timestamps rather than counted locally, which is why they agree.
 
-Firebase rules allow `/g/*` to be read and written by anyone, limited to strings
-under 4000 characters. The database URL is in the page source, so anyone who
-looks can reach these games. For two people playing Scrabble that is a trade
-worth making; it is not a pattern to copy for anything that matters.
+Everything is stored under `/s/<key>`, where the key is a SHA-256 hash of a
+passphrase only the two phones know. Each phone asks for it once and keeps the
+hash, never the passphrase. The Firebase rules allow that one path, limited to
+strings under 4000 characters, and refuse everything else, including listing
+what the database holds. The database URL is in the page source, but without
+the passphrase there is nothing there to find.
+
+`npm run rules` asks for the passphrase and prints the rules to paste into
+Firebase console > Realtime Database > Rules. Neither the passphrase nor its hash
+belongs in this repo.
+
+Games used to live under `/g/`, open to anyone. On first unlock a phone copies
+anything still there into the new location, filling only empty slots.
+`npm run rules -- --final` prints the rules with `/g/` closed.
 
 ## Rules that differ from Scrabble
 
