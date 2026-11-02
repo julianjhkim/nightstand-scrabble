@@ -3,9 +3,11 @@
   "private": true,
   "scripts": {
     "build": "python3 build.py",
-    "test": "node test/run.js"
+    "test": "node test/run.js",
+    "deploys": "node scripts/deploys-left.js"
   },
   "devDependencies": {
-    "jsdom": "^29.1.1"
+    "jsdom": "^29.1.1",
+    "netlify-cli": "^27.16.1"
   }
 }

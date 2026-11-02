@@ -11,6 +11,15 @@ phones stay in sync, and the house rules.
   showing the user anything.
 - Deploying (Netlify) costs 15 credits out of 300 free per month. Batch changes
   and deploy only when the user asks.
+- The Netlify project (scrabble4hailey) is linked to this GitHub repo, so every
+  push to `main` deploys and costs 15 credits, even a README-only change. Never
+  push unless the user asks. Commit locally as often as needed; that is free.
+- Before every push, run `npm run deploys` and tell the user how many deploys
+  are left this period, then wait for a yes. Credits reset on the 20th, not the
+  1st. If it says Netlify can't be reached, ask the user to run
+  `npx netlify login`; never handle tokens yourself.
+- `netlify.toml` tells Netlify to publish `dist/`. Without it Netlify publishes
+  the repo root, which has no `index.html`, and the site shows a 404.
 
 ## How to work with the user
 
