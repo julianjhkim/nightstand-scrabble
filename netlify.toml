@@ -1,0 +1,4 @@
+# The game is one built file, dist/index.html, committed to the repo.
+# Netlify only has to publish it; build.py runs locally before each commit.
+[build]
+  publish = "dist"
